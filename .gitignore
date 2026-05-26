@@ -11,3 +11,6 @@ cti_legacy_backup.zip
 design/_duplicates/
 design/test_cat/
 _*.py
+state/
+.ruff_cache/
+.pytest_cache/

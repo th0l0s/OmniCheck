@@ -7,7 +7,10 @@ see every feed's verdict for a given asset on a single row. No upstream fetch.
 """
 from __future__ import annotations
 
+import asyncio
+import ipaddress
 import logging
+import socket
 from datetime import datetime, timezone
 
 log = logging.getLogger("cti.assets")
@@ -32,6 +35,26 @@ def _worst(*levels):
     return lv
 
 
+async def _resolve(asset: str) -> str:
+    """DNS status for the asset: the IP itself for an IP, an A record for a
+    domain, or NXDOMAIN/error. Bounded so it never hangs the refresh."""
+    try:
+        ipaddress.ip_address(asset)
+        return "self (ip)"
+    except ValueError:
+        pass
+    try:
+        loop = asyncio.get_event_loop()
+        infos = await asyncio.wait_for(
+            loop.getaddrinfo(asset, None, family=socket.AF_INET), timeout=3.0)
+        return infos[0][4][0] if infos else "no-record"
+    except (asyncio.TimeoutError, socket.gaierror):
+        return "NXDOMAIN"
+    except Exception as exc:
+        log.debug("dns resolve %s failed: %s", asset, exc)
+        return "error"
+
+
 async def fetch(cfg, ctx) -> dict:
     assets: dict[str, dict] = {}
     for feed, asset_key in _FEEDS.items():
@@ -47,6 +70,11 @@ async def fetch(cfg, ctx) -> dict:
                 "open_ports": row.get("open_ports"),
                 "vuln_count": row.get("vuln_count"),
             }
+    # resolve DNS for all assets concurrently (bounded per-lookup)
+    names = list(assets)
+    dns = await asyncio.gather(*[_resolve(a) for a in names])
+    for a, d in zip(names, dns):
+        assets[a]["dns"] = d
     return {"assets": list(assets.values()),
             "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
@@ -62,6 +90,7 @@ def parse(raw: dict) -> dict:
             at_risk += 1
         rows.append({
             "asset": a["asset"],
+            "dns": a.get("dns", "—"),
             "max_risk": worst or "—",
             "shodan": sh.get("risk_level") or "—",
             "netlas": nl.get("risk_level") or "—",
@@ -83,6 +112,7 @@ def schema() -> dict:
             "rows_key": "rows",
             "columns": [
                 {"key": "asset", "label": "Asset (IP / domain)"},
+                {"key": "dns", "label": "DNS"},
                 {"key": "max_risk", "label": "Max Risk", "badge": True},
                 {"key": "shodan", "label": "Shodan", "badge": True},
                 {"key": "netlas", "label": "Netlas", "badge": True},

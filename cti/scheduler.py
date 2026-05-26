@@ -16,6 +16,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
+from . import store
 from .config import source_cfg
 from .core import Ctx, CircuitBreaker, TTLCache
 from .registry import SourceState
@@ -36,10 +37,13 @@ async def _refresh(state: SourceState, cfg: dict, ctx: Ctx, breaker: CircuitBrea
         state.ok = True
         state.last_error = None
         state.last_fetch = _now()
+        store.save_source(state.id, {"data": data, "fetched_at": state.last_fetch})
+        store.append_event({"source": state.id, "event": "refresh_ok"})
         log.info("source %s refreshed", state.id)
     except Exception as exc:
         state.ok = False
         state.last_error = str(exc)[:300]
+        store.append_event({"source": state.id, "event": "refresh_fail", "error": str(exc)[:200]})
         log.warning("source %s refresh failed: %s", state.id, exc)
     state.age_s = ctx.cache.age(state.id)
 
@@ -53,6 +57,11 @@ async def _loop(state: SourceState, cfg: dict, ctx: Ctx) -> None:
     while True:
         await _refresh(state, cfg, ctx, breaker)
         await asyncio.sleep(interval)
+
+
+async def refresh_once(state: SourceState, cfg: dict, ctx: Ctx) -> None:
+    """Public single-shot refresh (used by the manual /api/refresh route)."""
+    await _refresh(state, cfg, ctx, CircuitBreaker(threshold=99))
 
 
 def _should_run(state: SourceState, cfg: dict) -> bool:

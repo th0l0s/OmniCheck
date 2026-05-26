@@ -135,6 +135,34 @@ class CircuitBreaker:
         return result
 
 
+# ── manual-refresh guard ────────────────────────────────────────────────────
+
+class RefreshGate:
+    """Throttle manual refreshes: a per-source cooldown plus a per-source lock so
+    two manual refreshes of the same source can't run (or stampede upstream) at
+    once. Raises HTTP-mapped errors the route turns into 429/409."""
+
+    def __init__(self, min_interval_s: float = 60.0) -> None:
+        self.min_interval_s = min_interval_s
+        self._last: dict[str, float] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def lock_for(self, source_id: str) -> asyncio.Lock:
+        return self._locks.setdefault(source_id, asyncio.Lock())
+
+    def check(self, source_id: str) -> None:
+        """Raise (429/409) if a manual refresh is not allowed right now."""
+        from fastapi import HTTPException
+        if self.lock_for(source_id).locked():
+            raise HTTPException(409, "refresh already running")
+        elapsed = time.monotonic() - self._last.get(source_id, 0.0)
+        if elapsed < self.min_interval_s:
+            raise HTTPException(429, f"refresh cooldown: retry in {int(self.min_interval_s - elapsed)}s")
+
+    def mark(self, source_id: str) -> None:
+        self._last[source_id] = time.monotonic()
+
+
 # ── source context ────────────────────────────────────────────────────────────
 
 class Ctx:

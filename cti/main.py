@@ -21,15 +21,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, config, registry, scheduler
-from .core import Ctx, TTLCache, setup_logging
+from . import __version__, config, registry, scheduler, store
+from .auth import require_api_key
+from .core import Ctx, RefreshGate, TTLCache, setup_logging
 
 log = logging.getLogger("cti.main")
 _STARTED = time.time()
+_GATE = RefreshGate(min_interval_s=60.0)
 
 _STATIC = Path(__file__).resolve().parent / "static"
 _DESIGN = Path(__file__).resolve().parent.parent / "design"
@@ -50,8 +52,16 @@ async def lifespan(app: FastAPI):
         headers={"User-Agent": _USER_AGENT},
     )
     ctx = Ctx(client=client, cache=CACHE)
+    # warm the cache from disk so the dashboard isn't empty right after a restart
+    warmed = 0
+    for sid, state in STATES.items():
+        saved = store.load_source(sid)
+        if saved and saved.get("data") is not None:
+            CACHE.set(sid, saved["data"], ttl=state.interval * 3)
+            state.last_fetch = saved.get("fetched_at")
+            warmed += 1
     tasks = scheduler.start(STATES, CFG, ctx)
-    log.info("CTI v%s up — %d sources registered", __version__, len(STATES))
+    log.info("CTI v%s up — %d sources registered, %d warmed from disk", __version__, len(STATES), warmed)
     try:
         yield
     finally:
@@ -155,17 +165,20 @@ async def api_data(source_id: str):
 
 
 @app.post("/api/refresh/{source_id}")
-async def api_refresh(source_id: str):
-    """Force an out-of-band refresh. Never blocks the caller beyond the fetch."""
+async def api_refresh(source_id: str, _: None = Depends(require_api_key)):
+    """Force an out-of-band refresh. Requires X-API-Key; rate-limited + locked
+    per source so it can't stampede the upstream or spend quota repeatedly."""
     state = STATES.get(source_id)
     if state is None:
         raise HTTPException(404, f"unknown source: {source_id}")
-    client = httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=8.0),
-                               follow_redirects=True, headers={"User-Agent": _USER_AGENT})
-    ctx = Ctx(client=client, cache=CACHE)
-    from .core import CircuitBreaker
-    try:
-        await scheduler._refresh(state, CFG, ctx, CircuitBreaker(threshold=99))
-    finally:
-        await client.aclose()
+    _GATE.check(source_id)
+    _GATE.mark(source_id)
+    async with _GATE.lock_for(source_id):
+        client = httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=8.0),
+                                   follow_redirects=True, headers={"User-Agent": _USER_AGENT})
+        ctx = Ctx(client=client, cache=CACHE)
+        try:
+            await scheduler.refresh_once(state, CFG, ctx)
+        finally:
+            await client.aclose()
     return {"id": source_id, "ok": state.ok, "error": state.last_error}

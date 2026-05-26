@@ -7,7 +7,10 @@
 # empty is skipped automatically and shown as disabled in the dashboard.
 
 debug: false
-host: 0.0.0.0
+# Safe default: loopback only. Set 0.0.0.0 to expose on the LAN/VPN — and then
+# set CTI_API_KEY so mutating endpoints (POST /api/refresh) require a key.
+# The deployed host keeps its own config.yaml; deploy.py does not overwrite it.
+host: 127.0.0.1
 port: 9000
 
 sources:
