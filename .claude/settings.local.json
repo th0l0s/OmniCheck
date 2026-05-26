@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Ale\\\\Documents\\\\Claude\\\\Projects\\\\CTI\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(python deploy.py --service shodan_intel_api)",
+      "Bash(python3 deploy.py --service shodan_intel_api)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\Ale\\\\Documents\\\\Claude\\\\Projects\\\\CTI\\\\logs\\\\2026-05-22_18-39\")",
+      "PowerShell(cd \"C:\\\\Users\\\\Ale\\\\Documents\\\\Claude\\\\Projects\\\\CTI\\\\bgpwatch_it\"; $env:SCAN_INTERVAL=\"9999\"; $env:MAX_PREFIXES_PER_ASN=\"2\"; Start-Process -FilePath \".\\\\.venv\\\\Scripts\\\\python.exe\" -ArgumentList \"main.py\" -RedirectStandardError \"boot.err.log\" -RedirectStandardOutput \"boot.out.log\" -NoNewWindow; Start-Sleep -Seconds 6; try { \\(Invoke-WebRequest -Uri \"http://127.0.0.1:8004/health\" -UseBasicParsing\\).Content; \"----TARGETS----\"; \\(Invoke-WebRequest -Uri \"http://127.0.0.1:8004/targets\" -UseBasicParsing\\).Content.Substring\\(0,200\\) } catch { $_ })",
+      "WebFetch(domain:www.acn.gov.it)",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check /tmp/_chk.js)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

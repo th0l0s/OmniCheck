@@ -1,0 +1,190 @@
+# CTI — Feed registry (Italian/EU cybersecurity authorities + sector events)
+# Loaded by main.py; polled by an async worker that honors ETag/Last-Modified.
+# Keep this file as the single source of truth: editable, diff-friendly.
+
+defaults:
+  user_agent: "CTI-Aggregator/1.0 (+https://internalprotection.local)"
+  timeout_sec: 15
+  max_redirects: 3
+  retry: 2
+  backoff_sec: 5
+  cache:
+    # HTTP-level conditional GET. Worker must:
+    #   1) on 1st fetch: store ETag + Last-Modified headers from response
+    #   2) on next fetch: send If-None-Match + If-Modified-Since
+    #   3) on 304 Not Modified: refresh TTL only, do NOT re-parse
+    use_etag: true
+    use_last_modified: true
+    # disk cache directory relative to CTI/
+    dir: ".cache/feeds"
+    # negative cache: avoid hammering broken feeds
+    negative_ttl_min: 30
+
+# Polling tiers: high = alerts/IoCs, medium = news, low = events/calendars.
+tiers:
+  high:   { ttl_min: 15,   jitter_sec: 60 }
+  medium: { ttl_min: 60,   jitter_sec: 120 }
+  low:    { ttl_min: 1440, jitter_sec: 600 }
+
+feeds:
+
+  # ─── Tier HIGH: authoritative alerts / IoCs ─────────────────────────────
+  - id: acn_main
+    name: "ACN — Agenzia per la Cybersicurezza Nazionale"
+    category: authority_it
+    kind: rss
+    url: "https://www.acn.gov.it/portale/it/feedrss"
+    tier: high
+    enabled: true
+    verified: true
+    notes: "Hub RSS ACN. Include CSIRT bulletins, news, comunicati."
+
+  - id: csirt_alerts_scrape
+    name: "CSIRT Italia — Alert e Bollettini (HTML)"
+    category: authority_it
+    kind: scrape
+    url: "https://www.acn.gov.it/portale/it/csirt-italia/alert-e-bollettini"
+    selector: "article.detailDocument, .lista-news a"
+    tier: high
+    enabled: true
+    verified: true
+    notes: "Fallback se acn_main non copre tutti gli alert. Diff su URL+title."
+
+  # ─── Tier MEDIUM: cybersecurity news / awareness / EU ───────────────────
+  - id: enisa_news_sitemap
+    name: "ENISA — News & Publications (sitemap diff)"
+    category: authority_eu
+    kind: sitemap
+    url: "https://www.enisa.europa.eu/sitemap.xml"
+    filter:
+      include_paths: ["/news/", "/publications/", "/topics/"]
+    tier: medium
+    enabled: true
+    verified: true
+    notes: "RSS ENISA dismessi nel 2024. Polling via sitemap <lastmod> diff."
+
+  - id: ecsm_awareness
+    name: "ECSM — European Cybersecurity Month"
+    category: awareness_eu
+    kind: scrape
+    url: "https://cybersecuritymonth.eu/news"
+    selector: "article, .news-item"
+    tier: low
+    enabled: true
+    verified: true
+    notes: "Picco attività ottobre. Tier low il resto dell'anno."
+
+  - id: cybersecitalia_news
+    name: "CyberSecurity Italia — Quotidiano"
+    category: media_it
+    kind: rss
+    url: "https://www.cybersecitalia.it/feed/"
+    tier: medium
+    enabled: true
+    verified: true
+    notes: "WordPress default feed. HEAD check al primo poll per validare."
+
+  - id: federprivacy_news
+    name: "Federprivacy — Privacy Day Forum & news"
+    category: privacy_it
+    kind: rss
+    url: "https://www.federprivacy.org/?format=feed&type=rss"
+    tier: medium
+    enabled: true
+    verified: true
+    notes: "CMS Joomla. Fallback: scrape /agenda."
+
+  - id: aisis_news
+    name: "AISIS — e-Health Italia"
+    category: ehealth_it
+    kind: rss
+    url: "https://www.aisis.it/feed/"
+    tier: medium
+    enabled: true
+    verified: true
+    notes: "WordPress. Validare al primo poll."
+
+  - id: forumpa_news
+    name: "Forum PA — FPA"
+    category: pa_it
+    kind: rss
+    url: "https://www.forumpa.it/feed/"
+    tier: medium
+    enabled: true
+    verified: true
+    notes: "WordPress. Validare al primo poll."
+
+  # ─── Tier LOW: event calendars (mensile basta) ──────────────────────────
+  - id: cybertech_europe
+    name: "Cybertech Europe — Roma"
+    category: event_it
+    kind: scrape
+    url: "https://italy.cybertechconference.com/news"
+    selector: ".news-list a, article.news-card"
+    tier: low
+    enabled: true
+    verified: true
+    notes: "Evento annuale ottobre. No RSS noto."
+
+  - id: itasec_conference
+    name: "ITASEC — Conferenza nazionale cybersicurezza (CINI/SERICS)"
+    category: event_it
+    kind: scrape
+    url: "https://cybersecnatlab.it/category/itasec/"
+    selector: "article h2 a, .post-title a"
+    tier: low
+    enabled: true
+    verified: true
+    notes: "Patrocinio ACN. Edizione 2026: Cagliari 9-13 feb."
+
+  - id: himss_europe
+    name: "HIMSS Europe — e-Health Summit"
+    category: event_eu
+    kind: rss
+    url: "https://www.himss.org/news-center/rss.xml"
+    tier: low
+    enabled: true
+    verified: false
+    notes: "Validare endpoint RSS al primo poll. Edizione 2026: Copenhagen 19-21 mag."
+
+  - id: soiel_security_events
+    name: "Soiel — Sicurezza ICT (SmartSec / Net&System Security)"
+    category: event_it
+    kind: scrape
+    url: "https://www.soiel.it/eventi/"
+    selector: ".event-list a, article.event"
+    tier: low
+    enabled: true
+    verified: true
+    notes: "Organizzatore eventi tecnici SOC/sicurezza. No RSS evento-specifico."
+
+  # ─── Future expansion (commented out, ready to enable) ──────────────────
+  # - id: urlhaus_recent
+  #   name: "URLhaus — recent malicious URLs"
+  #   category: ioc
+  #   kind: rss
+  #   url: "https://urlhaus.abuse.ch/feeds/hostfile/"
+  #   tier: high
+  # - id: cisa_advisories
+  #   name: "CISA — Cybersecurity Advisories"
+  #   category: authority_us
+  #   kind: rss
+  #   url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"
+  #   tier: high
+  # - id: otx_pulses
+  #   name: "AlienVault OTX — pulses"
+  #   category: ioc
+  #   kind: api
+  #   url: "https://otx.alienvault.com/api/v1/pulses/subscribed"
+  #   auth: { header: "X-OTX-API-KEY", env: "OTX_API_KEY" }
+  #   tier: high
+
+# ─── Operational notes for the worker ─────────────────────────────────────
+# 1. Loader: yaml.safe_load → validate against pydantic FeedSpec model.
+# 2. State persistence per feed: { etag, last_modified, last_fetch, last_status,
+#    last_hash, error_count }. Save in cache.dir as <id>.json (atomic rename).
+# 3. On 304: bump last_fetch, leave content untouched.
+# 4. On 200: parse → diff against last_hash → emit only new entries.
+# 5. Negative cache on 4xx/5xx: skip until negative_ttl_min elapses.
+# 6. Verified=false entries should be probed once (HEAD) and flipped on success;
+#    if HEAD returns non-feed Content-Type, fall back to scrape selector.

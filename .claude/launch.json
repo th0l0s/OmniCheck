@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cti",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-m", "uvicorn", "cti.main:app", "--host", "127.0.0.1", "--port", "9000"],
+      "port": 9000
+    }
+  ]
+}

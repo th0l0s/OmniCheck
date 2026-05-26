@@ -1,0 +1,22 @@
+# CTI Sentinel — single systemd unit. Replaces the former 6 per-service units.
+# Install: cp cti.service /etc/systemd/system/ && systemctl daemon-reload
+#          systemctl enable --now cti
+# Deploy:  git pull && systemctl restart cti
+[Unit]
+Description=CTI Sentinel (single binary: sources + scheduler + dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cti
+EnvironmentFile=-/opt/cti/.env
+ExecStart=/opt/cti/.venv/bin/python -m cti
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

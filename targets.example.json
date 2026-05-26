@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "Shared target list for CTI monitoring engines (Shodan, Netlas, ...)",
+  "targets": [
+    {
+      "value": "1.2.3.4",
+      "label": "Example public IP"
+    },
+    {
+      "value": "203.0.113.0/24",
+      "label": "Example subnet (CIDR)"
+    },
+    {
+      "value": "example.com",
+      "label": "Example domain"
+    }
+  ]
+}
