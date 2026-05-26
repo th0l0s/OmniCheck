@@ -107,17 +107,6 @@ def schema() -> dict:
         "title": "Assets",
         "icon": ICON,
         "category": "meta",
+        "widget": "intel",
         "summary_keys": ["assets_total", "at_risk"],
-        "table": {
-            "rows_key": "rows",
-            "columns": [
-                {"key": "asset", "label": "Asset (IP / domain)"},
-                {"key": "dns", "label": "DNS"},
-                {"key": "max_risk", "label": "Max Risk", "badge": True},
-                {"key": "shodan", "label": "Shodan", "badge": True},
-                {"key": "netlas", "label": "Netlas", "badge": True},
-                {"key": "ports", "label": "Ports"},
-                {"key": "seen_in", "label": "Feeds"},
-            ],
-        },
     }

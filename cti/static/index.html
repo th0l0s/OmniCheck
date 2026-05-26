@@ -1634,6 +1634,28 @@ function tableHtml(t,data,full){
   return h;
 }
 
+function intelWidget(data, full) {
+  const rows = (data && data.rows) || [];
+  const show = full ? rows : rows.slice(0, 8);
+  if (!show.length) return `<div class="intel-empty"><strong>no targets yet</strong>add IPs or domains under sources.shodan.targets / sources.netlas.targets in config.yaml</div>`;
+  let h = `<div class="intel-target-list">`;
+  for (const r of show) {
+    const risk = String(r.max_risk || "").toLowerCase();
+    const dc = (risk === 'critical' || risk === 'high') ? 'st-err' : risk === 'medium' ? 'st-warn' : (risk === 'low' || risk === 'clean') ? 'st-ok' : 'st-off';
+    const type = r.dns === 'self (ip)' ? 'IP' : 'DOMAIN';
+    const dnsVal = (r.dns && r.dns !== '—' && r.dns !== 'self (ip)') ? r.dns : '';
+    const dns = dnsVal ? `<span class="intel-target-detail">DNS: ${esc(dnsVal)}</span>` : '';
+    const sh = r.shodan && r.shodan !== '—' ? `<span class="intel-target-detail">Shodan:</span> ${badge(r.shodan)}` : '';
+    const nl = r.netlas && r.netlas !== '—' ? `<span class="intel-target-detail">Netlas:</span> ${badge(r.netlas)}` : '';
+    const ports = r.ports && r.ports !== '—' ? `<span class="intel-target-detail">${esc(r.ports)}</span>` : '';
+    const alert = (risk === 'critical' || risk === 'high') ? ` <span class="intel-target-alert">AT RISK</span>` : '';
+    h += `<div class="intel-target"><span class="dot ${dc}"></span><span class="intel-target-addr">${esc(r.asset)}:</span><span class="intel-target-type">${type}</span><div class="intel-target-meta">${dns}${sh}${nl}${ports}${alert}</div></div>`;
+  }
+  h += `</div>`;
+  if (!full && rows.length > 8) h += `<div class="empty">+${rows.length - 8} more — open →</div>`;
+  return h;
+}
+
 function panelHtml(s,full){
   const sc=s.schema||{}, m=meta(s.id), payload=state.data[s.id]||{}, data=payload.data;
   const ext=m.link?`<a href="${m.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="console">↗</a>`:"";
@@ -1648,9 +1670,10 @@ function panelHtml(s,full){
     const keys=(sc.summary_keys||[]);
     let kv=keys.length?`<div class="kv-grid">`+keys.map(k=>`<div class="kv-item"><div class="kv-v">${esc(data[k]==null?"—":data[k])}</div><div class="kv-k">${esc(k.replace(/_/g," "))}</div></div>`).join("")+`</div>`:"";
     let sect="";
-    if(sc.sections){ for(const se of sc.sections){ sect+=`<div class="sect-title">${esc(se.title)}</div>`+tableHtml(se.table,data,full); } }
+    if(sc.widget==='intel'){ sect=intelWidget(data,full); }
+    else if(sc.sections){ for(const se of sc.sections){ sect+=`<div class="sect-title">${esc(se.title)}</div>`+tableHtml(se.table,data,full); } }
     else if(sc.table){ sect=tableHtml(sc.table,data,full); }
-    body=`<div class="panel-body">${kv}${sect}</div>`;
+    body=sc.widget==='intel'?`<div class="panel-body">${kv}</div>${sect}`:`<div class="panel-body">${kv}${sect}</div>`;
   }
   return {hdr,body};
 }
