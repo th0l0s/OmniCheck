@@ -1,12 +1,15 @@
 # todo
 
-1. ispired to antirez dev style
-2. unified ip/domain target overview with colon for relative status dns and ape result, 
-3. write a guide to frist setup and schema di funzionamento di tutto il sistema
-4. API key su endpoint mutativi + bind default 127.0.0.1 (sei dietro VPN/Tailscale, ma sano);
-5. servizio non-root (utente dedicato + hardening systemd);
-6. cooldown/lock su /api/refresh;
+- unifica il pannello di ip intel/assett riportando i vari check distribuito su colonne, shodan,netla,..futuri..
 
+- il  widget cloud-status presentalo con la stessa visualizzazione come la kpi-bar in alto ma per i cloud provider
+
+- anche un recap del rootdns monitor va spostato nella parte alta sottoforma di spia
+
+
+- qualasiasi indicatore deve essere un link cliccabile che porta alla diasgnostica ed allo status pages
+
+- prevedi la facilità di innestare nuovi engine api o feed con alcune istruzioni mirate su requisiti minimi per i moduli futuri e loro implementazione
 
 
 
