@@ -5,3 +5,9 @@ logs/
 .env
 *.log
 *.private
+# local-only / scratch
+targets.json
+cti_legacy_backup.zip
+design/_duplicates/
+design/test_cat/
+_*.py

@@ -86,7 +86,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "IOC Correlation",
-        "icon": "open-source",
+        "icon": "/icons/security/icons8-fingerprint-50.png",
+        "category": "meta",
         "summary_keys": ["correlated_iocs", "max_overlap"],
         "table": {
             "rows_key": "rows",

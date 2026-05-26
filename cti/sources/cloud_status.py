@@ -28,12 +28,37 @@ INTERVAL = 300  # 5 min
 # (HTML SPA only), so they are not defaulted; add them in config.yaml with a
 # working url if one becomes available. Each provider also carries `page`, the
 # human status page the dashboard links its indicator to.
+_ICONS = {
+    "aws": "/icons/cloud/icons8-amazon-aws-50.png",
+    "azure": "/icons/cloud/icons8-azure-50.png",
+    "office": "/icons/brand/icons8-office-365-50.png",
+    "google": "/icons/cloud/icons8-google-cloud-50.png",
+    "cloudflare": "/icons/cloud/icons8-cloudflare-50.png",
+    "ovh": "/icons/cloud/icons8-ovh-50.png",
+    "_default": "/icons/cloud/icons8-cloud-50.png",
+}
+
+
+def _icon_for(name: str) -> str:
+    low = name.lower()
+    for k, v in _ICONS.items():
+        if k != "_default" and k in low:
+            return v
+    return _ICONS["_default"]
+
+
 _DEFAULT_PROVIDERS = [
     {"name": "AWS", "type": "rss", "url": "https://status.aws.amazon.com/rss/all.rss",
      "page": "https://health.aws.amazon.com/health/status", "region": "Global"},
     {"name": "Microsoft Azure", "type": "rss",
      "url": "https://azurestatuscdn.azureedge.net/en-us/status/feed/",
      "page": "https://status.azure.com/en-us/status", "region": "Global"},
+    # Office 365 / M365 service health has no credential-free public feed; live
+    # health needs the M365 admin (Graph serviceHealth) API. Shown separately,
+    # honestly marked, with a link to the public status page.
+    {"name": "Office 365", "type": "info", "url": "",
+     "page": "https://status.cloud.microsoft", "region": "Global",
+     "note": "needs M365 admin (Graph) auth for live health"},
     {"name": "Google Cloud", "type": "gcp", "url": "https://status.cloud.google.com/incidents.json",
      "page": "https://status.cloud.google.com", "region": "Global"},
     {"name": "Scaleway", "type": "statuspage", "url": "https://status.scaleway.com",
@@ -109,6 +134,9 @@ async def _rss(client, p):
 async def _one(client, p):
     try:
         kind = p.get("type")
+        if kind == "info":
+            return {**p, "status": "info", "detail": p.get("note", "status page only"),
+                    "incidents": 0, "affected": [], "ok": True}
         if kind == "gcp":
             res = await _gcp(client, p)
         elif kind == "rss":
@@ -144,7 +172,7 @@ def parse(raw: dict) -> dict:
             detail += " — " + ", ".join(p["affected"])
         rows.append({"provider": p.get("name", ""), "region": p.get("region", ""),
                      "status": st, "incidents": p.get("incidents", 0), "detail": detail[:120],
-                     "page": p.get("page", p.get("url", ""))})
+                     "page": p.get("page", p.get("url", "")), "icon": _icon_for(p.get("name", ""))})
     return {"providers_total": len(provs), "operational": operational,
             "degraded": degraded, "rows": rows}
 
@@ -152,13 +180,13 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Cloud Status",
-        "icon": "cloud",
+        "icon": "/icons/cloud/icons8-cloud-50.png",
         "category": "status",
         "summary_keys": ["providers_total", "operational", "degraded"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "provider", "label": "Provider", "link_key": "page"},
+                {"key": "provider", "label": "Provider", "link_key": "page", "icon_key": "icon"},
                 {"key": "region", "label": "Region"},
                 {"key": "status", "label": "Status", "badge": True},
                 {"key": "incidents", "label": "Incidents"},

@@ -123,7 +123,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Shodan Intel",
-        "icon": "code",
+        "icon": "/icons/security/icons8-nmap-50.png",
+        "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],
         "table": {
             "rows_key": "rows",

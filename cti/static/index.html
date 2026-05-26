@@ -1554,10 +1554,10 @@ const META = {
   netlas:{cat:"API",link:"https://app.netlas.io"}, bgp:{cat:"API",link:"https://stat.ripe.net"},
   rootmon:{cat:"PROBE",link:"https://root-servers.org"}, news_feed:{cat:"FEED",link:""},
   acn_misp:{cat:"FEED",link:"https://www.csirt.gov.it"}, cloud_status:{cat:"STATUS",link:""},
-  correlation:{cat:"META",link:""}, opencti:{cat:"META",link:""},
+  correlation:{cat:"META",link:""}, opencti:{cat:"META",link:""}, assets:{cat:"META",link:""},
 };
 const CAT_ORDER=["API","FEED","STATUS","PROBE","META"];
-const state={sources:[],data:{},view:"overview",next:15,refreshMs:15000};
+const state={sources:[],data:{},status:null,view:"overview",next:15,refreshMs:15000};
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const j=async u=>(await fetch(u)).json();
 function meta(id){return META[id]||{cat:"OTHER",link:""};}
@@ -1566,12 +1566,15 @@ function dotCls(s){if(!s.enabled)return"st-off";if(s.ok)return"st-ok";return s.e
 function badge(v){const c=String(v).toLowerCase().replace(/[^a-z_]/g,"");return `<span class="badge b-${c}">${esc(v)}</span>`;}
 function fmtAge(s){if(s==null)return"—";if(s<60)return Math.round(s)+"s";if(s<3600)return Math.round(s/60)+"m";return Math.round(s/3600)+"h";}
 function val(id,k){const d=state.data[id];return d&&d.data?d.data[k]:undefined;}
+function img(path,cls){return (path&&String(path).startsWith("/icons"))?`<img class="${cls}" src="${path}" onerror="this.style.display='none'">`:"";}
+function srcIcon(s){return (s.schema&&s.schema.icon)||"";}
 
 async function loadAll(force){
   const src=await j("/api/sources");
   state.sources=src.sources;
   const ds=await Promise.all(state.sources.map(s=>j("/api/data/"+s.id).catch(()=>({}))));
   state.data={}; state.sources.forEach((s,i)=>state.data[s.id]=ds[i]);
+  state.status=await j("/api/status").catch(()=>null);
   render();
   state.next=state.refreshMs/1000;
   document.getElementById("ts-lbl").textContent="updated "+new Date().toLocaleTimeString();
@@ -1581,18 +1584,20 @@ function render(){renderKpi();renderBar();renderWorkspace();renderFooter();}
 function renderKpi(){
   const online=state.sources.filter(s=>s.ok).length, total=state.sources.length;
   const degraded=state.sources.filter(s=>s.enabled&&!s.ok).length;
-  const alerts=val("atera","alerts_total");
-  const tickets=(val("atera","tickets_open")||0)+(val("atera","tickets_triage")||0);
-  const intel=val("news_feed","total_items"); const corr=val("correlation","correlated_iocs");
+  const bgpCrit=(val("bgp","critical")||[]).length;
+  const cloudDeg=val("cloud_status","degraded")||0;
+  const infraCrit=bgpCrit+cloudDeg;
+  const atRisk=val("assets","at_risk");
+  const rFail=val("rootmon","fail"), rTotal=val("rootmon","total_checks");
   const chips=[
-    {cls:online===total?"ok":(online===0?"crit":"warn"),v:`${online}/${total}`,l:"Sources",sub:`${degraded} degraded`,go:"overview"},
-    {cls:alerts>0?"crit":"ok",v:alerts==null?"—":alerts,l:"Alerts",sub:"RMM",go:"atera"},
-    {cls:"blue",v:tickets,l:"Tickets",sub:"open+triage",go:"atera"},
-    {cls:corr>0?"warn":"blue",v:intel==null?"—":intel,l:"Threat Intel",sub:corr!=null?corr+" corr IOC":"articles",go:"news_feed"},
+    {cls:online===total?"ok":(online===0?"crit":"warn"),ic:"/icons/network/icons8-internet-hub-50.png",v:`${online}/${total}`,l:"Sources",sub:`${degraded} degraded`,go:"overview"},
+    {cls:infraCrit>0?"crit":"ok",ic:"/icons/security/icons8-box-important-50.png",v:infraCrit,l:"Infra Critical",sub:`${bgpCrit} bgp · ${cloudDeg} cloud`,go:"bgp"},
+    {cls:atRisk>0?"warn":"blue",ic:"/icons/network/icons8-web-address-50.png",v:atRisk==null?"—":atRisk,l:"Assets at Risk",sub:"shodan+netlas",go:"assets"},
+    {cls:rFail>0?"crit":"ok",ic:"/icons/network/icons8-dns-50.png",v:rTotal==null?"—":`${(rTotal||0)-(rFail||0)}/${rTotal}`,l:"Root DNS",sub:rFail>0?`${rFail} failing`:"all roots ok",go:"rootmon"},
   ];
   document.getElementById("hdr-kpi").innerHTML=chips.map(c=>
     `<a class="kpi-chip ${c.cls}" href="#" onclick="go('${c.go}');return false">
-      <div class="kpi-chip-accent"></div>
+      <div class="kpi-chip-accent"></div>${img(c.ic,"kpi-icon")}
       <div class="kpi-chip-body"><div class="kpi-chip-val">${esc(c.v)}</div>
       <div class="kpi-chip-lbl">${esc(c.l)}</div><div class="kpi-chip-sub">${esc(c.sub)}</div></div></a>`).join("");
 }
@@ -1604,18 +1609,36 @@ function renderBar(){
       const cls=!s.enabled?"off":(s.ok?"ok":"error");
       const active=s.id===state.view?"active":"";
       html+=`<a class="hdr-pill ${cls} ${active}" href="#" onclick="go('${s.id}');return false">
-        <span class="dot ${dotCls(s)}"></span><span class="pname">${esc((s.schema&&s.schema.title)||s.name)}</span>
+        <span class="dot ${dotCls(s)}"></span>${img(srcIcon(s),"os-icon")}<span class="pname">${esc((s.schema&&s.schema.title)||s.name)}</span>
         <span class="pill-meta">${fmtAge(s.age_s)}</span></a>`;
     }
   }
+  html+=`<a class="hdr-pill ${state.view==="about"?"active":""}" href="#" onclick="go('about');return false"><span class="pname">ⓘ STATUS</span></a>`;
   document.getElementById("source-bar").innerHTML=html;
+}
+
+function tableHtml(t,data,full){
+  const rows=data[t.rows_key]||[]; const show=full?rows:rows.slice(0,6);
+  let h=`<table><thead><tr>`+t.columns.map(c=>`<th>${esc(c.label)}</th>`).join("")+`</tr></thead><tbody>`;
+  if(!show.length) h+=`<tr><td colspan="${t.columns.length}" class="empty">no rows</td></tr>`;
+  for(const r of show){ h+="<tr>"+t.columns.map(c=>{
+      let v=r[c.key]; if(v==null)v="";
+      if(c.badge){v=badge(v);}
+      else { const ic=c.icon_key&&r[c.icon_key]?img(r[c.icon_key],"prov-icon"):"";
+        let txt=(c.link_key&&r[c.link_key])?`<a href="${esc(r[c.link_key])}" target="_blank" rel="noopener">${esc(v)}</a>`:esc(v);
+        v=ic?`<span style="display:inline-flex;align-items:center;gap:6px">${ic}${txt}</span>`:txt; }
+      return `<td>${v}</td>`;
+    }).join("")+"</tr>"; }
+  h+=`</tbody></table>`;
+  if(!full&&rows.length>6) h+=`<div class="empty">+${rows.length-6} more — open →</div>`;
+  return h;
 }
 
 function panelHtml(s,full){
   const sc=s.schema||{}, m=meta(s.id), payload=state.data[s.id]||{}, data=payload.data;
   const ext=m.link?`<a href="${m.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="console">↗</a>`:"";
   const hdr=`<div class="panel-hdr">
-      <div class="panel-hdr-l"><span class="dot ${dotCls(s)}"></span><span class="panel-title">${esc(sc.title||s.name)}</span>
+      <div class="panel-hdr-l"><span class="dot ${dotCls(s)}"></span>${img(srcIcon(s),"panel-icon")}<span class="panel-title">${esc(sc.title||s.name)}</span>
       <span class="panel-pill">${esc(catOf(s))}</span></div>
       <div class="panel-hdr-r">${full?`every ${esc(s.interval)}s · age ${fmtAge(payload.age_s)}`:fmtAge(payload.age_s)} ${ext}</div></div>`;
   let body="";
@@ -1624,24 +1647,38 @@ function panelHtml(s,full){
   else {
     const keys=(sc.summary_keys||[]);
     let kv=keys.length?`<div class="kv-grid">`+keys.map(k=>`<div class="kv-item"><div class="kv-v">${esc(data[k]==null?"—":data[k])}</div><div class="kv-k">${esc(k.replace(/_/g," "))}</div></div>`).join("")+`</div>`:"";
-    let tbl="";
-    const t=sc.table;
-    if(t){ const rows=data[t.rows_key]||[]; const show=full?rows:rows.slice(0,6);
-      tbl=`<table><thead><tr>`+t.columns.map(c=>`<th>${esc(c.label)}</th>`).join("")+`</tr></thead><tbody>`;
-      if(!show.length) tbl+=`<tr><td colspan="${t.columns.length}" class="empty">no rows</td></tr>`;
-      for(const r of show){ tbl+="<tr>"+t.columns.map(c=>{let v=r[c.key];if(v==null)v="";
-        if(c.badge)v=badge(v); else if(c.link_key&&r[c.link_key])v=`<a href="${esc(r[c.link_key])}" target="_blank" rel="noopener">${esc(v)}</a>`; else v=esc(v);
-        return `<td>${v}</td>`;}).join("")+"</tr>"; }
-      tbl+=`</tbody></table>`;
-      if(!full&&rows.length>6) tbl+=`<div class="empty">+${rows.length-6} more — open →</div>`;
-    }
-    body=`<div class="panel-body">${kv}${tbl}</div>`;
+    let sect="";
+    if(sc.sections){ for(const se of sc.sections){ sect+=`<div class="sect-title">${esc(se.title)}</div>`+tableHtml(se.table,data,full); } }
+    else if(sc.table){ sect=tableHtml(sc.table,data,full); }
+    body=`<div class="panel-body">${kv}${sect}</div>`;
   }
   return {hdr,body};
 }
 
+function aboutHtml(){
+  const st=state.status;
+  if(!st) return `<div class="back" onclick="showOverview()">← overview</div><div class="empty">status unavailable</div>`;
+  const info=[["version",st.version],["uptime",Math.round(st.uptime_s/60)+" min"],["python",st.python],
+    ["platform",st.platform],["bind",st.host+":"+st.port],["debug",String(st.debug)],
+    ["sources",`${st.sources_ok}/${st.sources_total} ok`],["now",st.now]];
+  let h=`<div class="back" onclick="showOverview()">← overview</div>`;
+  h+=`<div class="panel"><div class="panel-hdr"><div class="panel-hdr-l">${img("/icons/security/icons8-cyber-security-1-50.png","panel-icon")}<span class="panel-title">Status / About — CTI Sentinel</span></div></div>
+    <div class="panel-body"><div class="kv-grid">`+info.map(([k,v])=>`<div class="kv-item"><div class="kv-v" style="font-size:13px">${esc(v)}</div><div class="kv-k">${esc(k)}</div></div>`).join("")+`</div>`;
+  const ci=st.config_issues||[], re=st.runtime_errors||[];
+  h+=`<div class="sect-title">Configuration issues (${ci.length})</div>`;
+  h+= ci.length?ci.map(x=>`<div class="errline">⚠ <b>${esc(x.source)}</b> — ${esc(x.detail)}</div>`).join(""):`<div class="offline-note">none — all enabled sources configured</div>`;
+  h+=`<div class="sect-title">Runtime errors (${re.length})</div>`;
+  h+= re.length?re.map(x=>`<div class="errline">✖ <b>${esc(x.source)}</b> — ${esc(x.detail)}</div>`).join(""):`<div class="offline-note">none — all active sources fetching ok</div>`;
+  h+=`<div class="sect-title">Sources</div><table><thead><tr><th>Source</th><th>State</th><th>Interval</th><th>Last fetch</th><th>Detail</th></tr></thead><tbody>`;
+  for(const s of st.sources){ const stt=!s.enabled?"off":(s.ok?"ok":"error");
+    h+=`<tr><td>${esc(s.name)}</td><td>${badge(stt)}</td><td>${esc(s.interval)}s</td><td>${esc(s.last_fetch||"—")}</td><td class="c-dim">${esc(s.error||"")}</td></tr>`; }
+  h+=`</tbody></table></div></div>`;
+  return h;
+}
+
 function renderWorkspace(){
   const ws=document.getElementById("workspace");
+  if(state.view==="about"){ ws.innerHTML=aboutHtml(); return; }
   if(state.view!=="overview"){
     const s=state.sources.find(x=>x.id===state.view);
     if(!s){ws.innerHTML=`<div class="empty">unknown source</div>`;return;}
@@ -1663,15 +1700,17 @@ function renderFooter(){
   const online=state.sources.filter(s=>s.ok).length,total=state.sources.length;
   const degraded=state.sources.filter(s=>s.enabled&&!s.ok).map(s=>(s.schema&&s.schema.title)||s.name);
   const off=state.sources.filter(s=>!s.enabled).length;
-  let crit="";
-  const bgp=val("bgp","critical"); if(bgp&&bgp.length) crit=`${bgp.length} BGP critical`;
-  const cd=(state.data["cloud_status"]||{}).data; if(cd&&cd.degraded) crit=(crit?crit+" · ":"")+`${cd.degraded} cloud degraded`;
+  let crit=[];
+  const bgp=val("bgp","critical"); if(bgp&&bgp.length) crit.push(`${bgp.length} BGP critical`);
+  const cd=val("cloud_status","degraded"); if(cd) crit.push(`${cd} cloud degraded`);
+  const rf=val("rootmon","fail"); if(rf) crit.push(`${rf} root DNS checks failing`);
+  const ar=val("assets","at_risk"); if(ar) crit.push(`${ar} assets at risk`);
   document.getElementById("status-footer").innerHTML=
     `<span class="foot-label">Status</span>`+
     `<span class="foot-item"><b>${online}/${total}</b> online</span>`+
     `<span class="foot-item">${degraded.length} degraded${degraded.length?": "+esc(degraded.join(", ")):""}</span>`+
     `<span class="foot-item">${off} off</span>`+
-    (crit?`<span class="foot-item" style="color:var(--crit)">⚠ ${esc(crit)}</span>`:`<span class="foot-item" style="color:var(--low)">no critical signals</span>`);
+    (crit.length?`<span class="foot-item" style="color:var(--crit)">⚠ ${esc(crit.join(" · "))}</span>`:`<span class="foot-item" style="color:var(--low)">no critical signals</span>`);
 }
 
 function go(id){ if(id==="overview"){showOverview();return;} state.view=id; render(); document.querySelector(".main-content").scrollTop=0; }

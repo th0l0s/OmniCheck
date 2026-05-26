@@ -176,7 +176,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Root DNS Monitor",
-        "icon": "network",
+        "icon": "/icons/network/icons8-dns-50.png",
+        "category": "probe",
         "summary_keys": ["total_checks", "ok", "fail", "avg_udp_latency_ms"],
         "table": {
             "rows_key": "rows",

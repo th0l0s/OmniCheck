@@ -13,7 +13,11 @@ no new HTML. That is the whole point of Plan B.
 from __future__ import annotations
 
 import logging
+import platform
+import sys
+import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -25,6 +29,7 @@ from . import __version__, config, registry, scheduler
 from .core import Ctx, TTLCache, setup_logging
 
 log = logging.getLogger("cti.main")
+_STARTED = time.time()
 
 _STATIC = Path(__file__).resolve().parent / "static"
 _DESIGN = Path(__file__).resolve().parent.parent / "design"
@@ -93,6 +98,40 @@ async def api_health():
         "version": __version__,
         "sources_total": len(sources),
         "sources_ok": healthy,
+        "sources": sources,
+    }
+
+
+@app.get("/api/status")
+async def api_status():
+    """Diagnostics for the status/about page: runtime info + config/runtime issues."""
+    config_issues, runtime_errors = [], []
+    sources = []
+    for s in STATES.values():
+        sources.append({
+            "id": s.id, "name": s.name, "enabled": s.enabled, "ok": s.ok,
+            "interval": s.interval, "last_fetch": s.last_fetch, "error": s.last_error,
+            "requires": s.requires,
+        })
+        if not s.enabled and s.last_error and "missing config" in (s.last_error or ""):
+            config_issues.append({"source": s.id, "detail": s.last_error})
+        elif s.enabled and not s.ok and s.last_error:
+            runtime_errors.append({"source": s.id, "detail": s.last_error})
+    up = int(time.time() - _STARTED)
+    return {
+        "app": "CTI Sentinel",
+        "version": __version__,
+        "debug": bool(CFG.get("debug")),
+        "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "uptime_s": up,
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "host": CFG.get("host", "0.0.0.0"),
+        "port": CFG.get("port", 8000),
+        "sources_total": len(sources),
+        "sources_ok": sum(1 for s in sources if s["ok"]),
+        "config_issues": config_issues,
+        "runtime_errors": runtime_errors,
         "sources": sources,
     }
 

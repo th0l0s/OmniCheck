@@ -76,7 +76,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "OpenCTI Export",
-        "icon": "open-source",
+        "icon": "/icons/dev/icons8-open-source-50.png",
+        "category": "meta",
         "summary_keys": ["bundle_size", "mode"],
         "table": {
             "rows_key": "rows",

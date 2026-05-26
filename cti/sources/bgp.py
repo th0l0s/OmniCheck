@@ -215,7 +215,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "BGP Watch IT",
-        "icon": "network",
+        "icon": "/icons/network/icons8-internet-50.png",
+        "category": "api",
         "summary_keys": ["targets_checked", "prefixes_checked"],
         "table": {
             "rows_key": "rows",

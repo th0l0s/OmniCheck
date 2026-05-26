@@ -1,9 +1,9 @@
 """
-atera — RMM alerts + tickets + offline servers from the Atera API.
+atera — RMM open tickets + recent alerts + offline servers from the Atera API.
 
-Requires sources.atera.api_key. Pulls open alerts, open/triage tickets and
-offline monitored servers in one sweep. Telegram dispatch from the old service
-is intentionally dropped here — alerting belongs in a notifier, not a source.
+Requires sources.atera.api_key. The dashboard shows OPEN TICKETS first, then
+only the last 5 alerts (schema `sections`). Telegram dispatch from the old
+service is intentionally dropped — alerting belongs in a notifier, not a source.
 """
 from __future__ import annotations
 
@@ -16,8 +16,10 @@ ID = "atera"
 NAME = "Atera RMM"
 INTERVAL = 120
 REQUIRES = ["api_key"]
+ICON = "/icons/security/icons8-security-shield-50.png"
 
 BASE_URL = "https://app.atera.com"
+ALERT_LIMIT = 5
 
 
 async def _get(client, api_key, path, params):
@@ -48,38 +50,60 @@ async def fetch(cfg, ctx) -> dict:
     }
 
 
+def _ticket_row(t):
+    return {
+        "title": t.get("TicketTitle", "") or t.get("Title", ""),
+        "customer": t.get("CustomerName", ""),
+        "priority": t.get("TicketPriority", "") or t.get("TicketStatus", "Open"),
+        "created": (t.get("TicketCreatedDate") or t.get("CreatedDate") or "")[:16].replace("T", " "),
+    }
+
+
+def _alert_row(a):
+    return {
+        "severity": str(a.get("AlertSeverity", "")),
+        "title": a.get("Title", ""),
+        "device": a.get("DeviceName", ""),
+        "customer": a.get("CustomerName", ""),
+        "created": (a.get("Created") or a.get("AlertCreatedDate") or "")[:16].replace("T", " "),
+    }
+
+
 def parse(raw: dict) -> dict:
     alerts = raw.get("alerts", [])
-    by_sev = {}
-    for a in alerts:
-        s = str(a.get("AlertSeverity", "")).strip() or "Unknown"
-        by_sev[s] = by_sev.get(s, 0) + 1
-    rows = [{"severity": str(a.get("AlertSeverity", "")), "title": a.get("Title", ""),
-             "device": a.get("DeviceName", ""), "customer": a.get("CustomerName", ""),
-             "device_type": str(a.get("AlertDeviceType", ""))} for a in alerts[:100]]
+    tickets = raw.get("tickets_open", [])
     return {
-        "alerts_total": len(alerts),
-        "tickets_open": len(raw.get("tickets_open", [])),
+        "tickets_open": len(tickets),
         "tickets_triage": len(raw.get("tickets_triage", [])),
+        "alerts_total": len(alerts),
         "servers_offline": len(raw.get("devices_offline", [])),
-        "by_severity": by_sev,
-        "rows": rows,
+        "ticket_rows": [_ticket_row(t) for t in tickets[:50]],
+        "alert_rows": [_alert_row(a) for a in alerts[:ALERT_LIMIT]],
     }
 
 
 def schema() -> dict:
     return {
         "title": "Atera RMM",
-        "icon": "devices",
-        "summary_keys": ["alerts_total", "tickets_open", "tickets_triage", "servers_offline"],
-        "table": {
-            "rows_key": "rows",
-            "columns": [
-                {"key": "severity", "label": "Severity", "badge": True},
-                {"key": "title", "label": "Alert"},
-                {"key": "device", "label": "Device"},
-                {"key": "customer", "label": "Customer"},
-                {"key": "device_type", "label": "Type"},
-            ],
-        },
+        "icon": ICON,
+        "category": "api",
+        "summary_keys": ["tickets_open", "tickets_triage", "alerts_total", "servers_offline"],
+        "sections": [
+            {"title": "Open Tickets", "table": {
+                "rows_key": "ticket_rows",
+                "columns": [
+                    {"key": "title", "label": "Ticket"},
+                    {"key": "customer", "label": "Customer"},
+                    {"key": "priority", "label": "Priority", "badge": True},
+                    {"key": "created", "label": "Created"},
+                ]}},
+            {"title": "Recent Alerts (last 5)", "table": {
+                "rows_key": "alert_rows",
+                "columns": [
+                    {"key": "severity", "label": "Severity", "badge": True},
+                    {"key": "title", "label": "Alert"},
+                    {"key": "device", "label": "Device"},
+                    {"key": "created", "label": "When"},
+                ]}},
+        ],
     }

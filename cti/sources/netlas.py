@@ -107,7 +107,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Netlas Intel",
-        "icon": "code",
+        "icon": "/icons/dev/icons8-query-50.png",
+        "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],
         "table": {
             "rows_key": "rows",

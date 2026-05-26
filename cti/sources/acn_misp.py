@@ -153,7 +153,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "ACN / CSIRT-IT",
-        "icon": "authority",
+        "icon": "/icons/security/icons8-cyber-security-50.png",
+        "category": "feed",
         "summary_keys": ["misp_total", "ioc_total", "rss_total"],
         "table": {
             "rows_key": "rows",

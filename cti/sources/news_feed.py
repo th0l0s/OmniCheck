@@ -177,7 +177,8 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "News Feed",
-        "icon": "news",
+        "icon": "/icons/network/icons8-rss-50.png",
+        "category": "feed",
         "summary_keys": ["sources_loaded", "total_items"],
         "table": {
             "rows_key": "rows",
