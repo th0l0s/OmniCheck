@@ -20,4 +20,5 @@ state/
 .pytests_cache/
 tests/__pycache__/    
 int/
+.claude
   

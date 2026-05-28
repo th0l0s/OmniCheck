@@ -1,11 +1,10 @@
-# CTI Sentinel
+# OmniCheck
 
 One binary. One scheduler. One dashboard. A personal threat-intelligence
 sentinel that collects from several sources via their APIs and presents them in
 a single, professional dashboard.
 
-This is the **Plan B consolidation** of the former 10 micro-services (see
-`REPORT_ANTIREZ_REVIEW.md`): instead of a FastAPI app per source plus an
+This is the **Plan B consolidation** of the former 10 micro-services instead of a FastAPI app per source plus an
 aggregator plus 6 systemd units plus 4 separate HTML dashboards, everything now
 lives in one package, `cti/`.
 
