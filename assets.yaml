@@ -1,0 +1,11 @@
+# CTI Sentinel — monitored asset watchlists.
+# Host-specific: deploy.py never overwrites this file.
+#
+# ips:     queried by Shodan + Netlas (IP intelligence)
+# domains: queried by Netlas (host: queries)
+#
+# POST /api/targets (X-API-Key) to add/remove from the dashboard.
+ips:
+  - 1.1.1.1
+domains:
+  - one.one.one.one

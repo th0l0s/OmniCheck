@@ -1,0 +1,141 @@
+# iaas-source.md — Sorgente autoritativa IaaS Italia
+# Parsed by: iaas_gen.py
+# Output:    iaas-providers.yaml  (config.yaml cloud_status.providers format)
+#            iaas-providers.json  (per la source cti/sources/iaas_status.py)
+#
+# Sintassi: blocchi "## Provider: <id>" con attributi "- key: value"
+# Righe "#" sono commenti, ignorate dal parser.
+# Campi obbligatori: id, name, region, status_url, status_type, page
+# Campi opzionali:   tier, location, notes, enabled (default: true)
+
+## Provider: aruba_cloud
+- id: aruba_cloud
+- name: Aruba Cloud
+- region: IT/AR, IT/BG
+- location: Arezzo; Ponte San Pietro (BG)
+- tier: III+
+- status_url: https://status.cloud.aruba.it
+- status_type: statuspage
+- page: https://www.cloud.it/it-IT/status.aspx
+- enabled: true
+- notes: Principale IaaS italiano. DC IT01 Arezzo, IT02 Ponte San Pietro, IT03 Arezzo Ovest.
+
+## Provider: seeweb
+- id: seeweb
+- name: Seeweb
+- region: IT/MI, IT/RM
+- location: Milano (Caldera Park); Roma
+- tier: III
+- status_url: https://status.seeweb.it
+- status_type: statuspage
+- page: https://status.seeweb.it
+- enabled: true
+- notes: Cloud italiano, DC a Milano e Roma. Statuspage Atlassian confermato.
+
+## Provider: equinix_ml
+- id: equinix_ml
+- name: Equinix Milan
+- region: IT/MI
+- location: Milano — Via Savona 19 (ML1); Vimercate (ML2, ML3)
+- tier: IV
+- status_url: https://www.equinixstatus.com
+- status_type: statuspage
+- page: https://www.equinixstatus.com
+- enabled: true
+- notes: Carrier-neutral colo. ML1 in città, ML2/ML3 nell'hinterland nord.
+
+## Provider: data4_milan
+- id: data4_milan
+- name: Data4 Milano
+- region: IT/MI
+- location: Cornaredo (MI)
+- tier: III+
+- status_url: https://status.data4group.com
+- status_type: statuspage
+- page: https://status.data4group.com
+- enabled: true
+- notes: Operatore francese con campus a Cornaredo. Acquisito SUPERNAP Italia 2022.
+
+## Provider: irideos
+- id: irideos
+- name: Irideos
+- region: IT/MI, IT/RM, IT/BO
+- location: Milano (Caldera Park); Roma; Bologna
+- tier: III+
+- status_url: https://www.irideos.it/stato-servizi/
+- status_type: html
+- page: https://www.irideos.it/stato-servizi/
+- enabled: true
+- notes: Ex-Telecom Italia DC. Nessun endpoint machine-readable. HTTP HEAD monitoring only.
+
+## Provider: noovle
+- id: noovle
+- name: Noovle (TIM Cloud)
+- region: IT/RM, IT/MI, IT/NA
+- location: Roma; Milano; Napoli
+- tier: III
+- status_url: https://noovle.com/it/supporto/stato-servizi/
+- status_type: html
+- page: https://noovle.com/it/supporto/stato-servizi/
+- enabled: false
+- notes: Brand cloud di TIM S.p.A. Status page HTML senza API pubblica. Monitorare via HEAD.
+
+## Provider: fastweb_cloud
+- id: fastweb_cloud
+- name: Fastweb Cloud
+- region: IT/MI
+- location: Milano (Caldera Park); Roma
+- tier: III
+- status_url: https://supporto.fastweb.it/en/uptime
+- status_type: html
+- page: https://supporto.fastweb.it/en/uptime
+- enabled: false
+- notes: Cloud ISP. Status page custom, nessun endpoint JSON noto.
+
+## Provider: supernap_it
+- id: supernap_it
+- name: SUPERNAP Italia
+- region: IT/PV
+- location: Siziano (PV)
+- tier: IV
+- status_url: https://supernap.it/it/operations/
+- status_type: html
+- page: https://supernap.it/it/operations/
+- enabled: false
+- notes: Ex-Switch SUPERNAP. Ora parte di Data4 Group. Tier IV, 500MW capacity target.
+
+## Provider: digital_realty_mil
+- id: digital_realty_mil
+- name: Digital Realty Milan
+- region: IT/MI
+- location: Milano
+- tier: III+
+- status_url: https://digitalrealtycloud.statuspage.io
+- status_type: statuspage
+- page: https://digitalrealtycloud.statuspage.io
+- enabled: true
+- notes: Colo internazionale con presenza a Milano. MIL campus.
+
+## Provider: colt_it
+- id: colt_it
+- name: Colt / BT Italia
+- region: IT/MI, IT/RM
+- location: Milano; Roma
+- tier: III
+- status_url: https://www.colt.net/network-status/
+- status_type: html
+- page: https://www.colt.net/network-status/
+- enabled: false
+- notes: Network carrier + colo. Status page HTML. RSS disponibile per alcune aree.
+
+## Provider: ovhcloud_eu
+- id: ovhcloud_eu
+- name: OVHcloud EU
+- region: EU/FR
+- location: Gravelines; Roubaix; Strasbourg
+- tier: III
+- status_url: https://status.ovhcloud.com
+- status_type: statuspage
+- page: https://status.ovhcloud.com
+- enabled: true
+- notes: Nessun DC fisico in Italia ma massicciamente usato da aziende IT. Statuspage confermato.

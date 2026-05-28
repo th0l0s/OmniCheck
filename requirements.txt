@@ -1,0 +1,9 @@
+# CTI Sentinel — pinned base. One file, reproducible build.
+# Plan B dropped: boto3, azure-identity, google-auth, redis, prometheus-client,
+# pydantic (sources emit plain dicts). What remains is the minimum to run.
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+pyyaml==6.0.2
+feedparser==6.0.11
+shodan==1.31.0

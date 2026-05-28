@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTI SENTINEL</title>
+<link rel="icon" type="image/png" href="/icons/logo/icons8-decentralized-network-48.png">
+<style>
+/* ════════════════════════════════════════════════════════════════
+   TOKENS
+════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #06090f;
+  --surface:   #090d16;
+  --panel:     #0d1120;
+  --panel-hi:  #111928;
+  --card:      #141c2e;
+  --border:    #182030;
+  --border-hi: #223050;
+
+  --text: #dde8f8;
+  --sub:  #7a90b8;
+  --dim-text: #6a82b4;   /* readable meta — WCAG AA (~4.6:1 on --bg) */
+  --dim:  #3a5070;       /* decoration only: hairlines, idle dots, separators */
+
+  --cyan:    #00d4ff;
+  --cyan-bg: #001826;
+  --cyan-bd: #003850;
+
+  --magenta: #ff2d78;
+  --mag-bg:  #1f0016;
+  --mag-bd:  #4a002e;
+
+  --green:   #3dffc0;
+  --grn-bg:  #001f18;
+  --grn-bd:  #004d40;
+
+  --amber:   #ffb700;
+  --amb-bg:  #1a1200;
+  --amb-bd:  #483200;
+
+  --blue:    #5599ff;
+  --blue-bg: #0a1530;
+  --blue-bd: #1a3060;
+
+  --high:    #ff6b2b;
+  --high-bg: #1a0c00;
+  --high-bd: #4a2000;
+
+  --crit:    var(--magenta);
+  --crit-bg: var(--mag-bg);
+  --crit-bd: var(--mag-bd);
+  --med:     var(--amber);
+  --med-bg:  var(--amb-bg);
+  --med-bd:  var(--amb-bd);
+  --low:     var(--green);
+  --low-bg:  var(--grn-bg);
+  --low-bd:  var(--grn-bd);
+  --info:    var(--blue);
+  --info-bg: var(--blue-bg);
+  --info-bd: var(--blue-bd);
+  --teal:    var(--cyan);
+  --teal-bg: var(--cyan-bg);
+  --teal-bd: var(--cyan-bd);
+  --orange:  var(--high);
+
+  --mono: 'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
+  --sb-w:    48px;    /* icon-rail width (reserved gutter) */
+  --sb-w-hi: 200px;   /* expanded width on hover */
+
+  /* space scale (4px base) — kills arbitrary paddings */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 32px;
+
+  /* shape */
+  --radius: 3px;
+  --radius-panel: 5px;
+
+  /* fluid grid */
+  --col-min: 300px;          /* min track width before grid adds a column */
+  --panel-prev-h: 320px;     /* safety scroll cap for content-rich previews */
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  background-image:
+    linear-gradient(rgba(0,212,255,.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,.016) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+/* ─── accessibility ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .scan-line { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MASTHEAD
+════════════════════════════════════════════════════════════════ */
+.masthead {
+  flex-shrink: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 200;
+}
+
+.masthead::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,
+    var(--cyan) 0%,
+    rgba(0,212,255,.4) calc(var(--sb-w) - 1px),
+    var(--border) var(--sb-w),
+    var(--border) 100%);
+  opacity: .5;
+  transition: background .2s;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sb-w);
+  height: 100%;
+  text-decoration: none;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.brand-icon { flex-shrink: 0; display: flex; align-items: center; }
+
+.brand-icon img {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(0,212,255,.65));
+}
+
+.brand-text {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--sub);
+  font-family: var(--mono);
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+
+.brand-text { display: none; }   /* icon-only brand in the 48px rail header */
+.brand-text em { color: var(--cyan); font-style: normal; }
+
+.mast-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 10px;
+}
+
+.mast-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 14px;
+  flex-shrink: 0;
+}
+
+.ts-txt {
+  font-size: 10px;
+  color: var(--dim-text);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+.cd-txt {
+  font-size: 10px;
+  color: var(--dim-text);
+  white-space: nowrap;
+}
+
+.cd-txt b { color: var(--sub); font-family: var(--mono); }
+
+.mast-btn {
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--sub);
+  padding: 3px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  transition: all .12s;
+  white-space: nowrap;
+}
+
+.mast-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,212,255,.06);
+  box-shadow: 0 0 12px rgba(0,212,255,.15);
+}
+
+.mast-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+.mast-btn.syncing {
+  border-color: rgba(0,212,255,.5);
+  color: var(--cyan);
+  animation: pulse-c 1.2s infinite;
+}
+
+@keyframes pulse-c {
+  0%,100% { box-shadow: 0 0 4px rgba(0,212,255,.2); }
+  50% { box-shadow: 0 0 14px rgba(0,212,255,.6); }
+}
+
+
+/* ─── threat badge ──────────────────────────────────────────── */
+.threat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+.threat-badge::before { content: '▶'; font-size: 7px; opacity: .7; }
+
+.threat-badge.thr-ok {
+  background: rgba(61,255,192,.07);
+  color: var(--green);
+  border: 1px solid rgba(61,255,192,.28);
+}
+
+.threat-badge.thr-warn {
+  background: rgba(255,183,0,.07);
+  color: var(--amber);
+  border: 1px solid rgba(255,183,0,.3);
+  animation: pulse-a 2.5s infinite;
+}
+
+.threat-badge.thr-crit {
+  background: rgba(255,45,120,.1);
+  color: var(--magenta);
+  border: 1px solid rgba(255,45,120,.4);
+  animation: pulse-m 1.8s infinite;
+}
+
+@keyframes pulse-a {
+  0%,100% { box-shadow: none; }
+  50% { box-shadow: 0 0 12px rgba(255,183,0,.25); }
+}
+
+@keyframes pulse-m {
+  0%,100% { box-shadow: 0 0 4px rgba(255,45,120,.3); }
+  50% { box-shadow: 0 0 16px rgba(255,45,120,.65); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   APP BODY
+════════════════════════════════════════════════════════════════ */
+.app-body {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  position: relative;   /* anchor for the overlay icon-rail */
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════════════════════════ */
+#sidebar {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: var(--sb-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  transition: width .15s ease, box-shadow .15s ease;
+  z-index: 100;
+}
+
+/* hover expands the rail as an overlay — content never reflows */
+#sidebar:hover {
+  width: var(--sb-w-hi);
+  box-shadow: 8px 0 28px rgba(0,0,0,.55);
+}
+
+#sidebar::-webkit-scrollbar { display: none; }
+
+#sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 1px; height: 100%;
+  background: linear-gradient(to bottom,
+    transparent,
+    rgba(0,212,255,.18) 15%,
+    rgba(0,212,255,.18) 85%,
+    transparent);
+  pointer-events: none;
+}
+
+#nav-list { display: flex; flex-direction: column; flex: 1; }
+
+.nav-group-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--dim-text);
+  padding: 12px 14px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--mono);
+}
+
+.nav-group-label-text {
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.nav-group-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+#sidebar:not(:hover) .nav-group-label-text { display: none; }
+#sidebar:not(:hover) .nav-group-label { padding: 6px 0; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 14px;
+  color: var(--sub);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .1s, border-color .1s, color .1s;
+  position: relative;
+  font-size: 12px;
+  border-left: 2px solid transparent;
+  white-space: nowrap;
+  user-select: none;
+  min-height: 32px;
+}
+
+.nav-item:hover {
+  background: var(--panel-hi);
+  color: var(--text);
+  border-left-color: rgba(0,212,255,.35);
+}
+
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(0,212,255,.07), transparent);
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+}
+
+#sidebar:not(:hover) .nav-item {
+  justify-content: center;
+  padding: 8px 0;
+  gap: 0;
+}
+
+.nav-icon {
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-src-icon {
+  width: 13px; height: 13px;
+  object-fit: contain;
+  opacity: .65;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity .15s;
+}
+
+.nav-age {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim-text);
+  flex-shrink: 0;
+}
+
+.nav-alert {
+  background: var(--magenta);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  min-width: 16px;
+  text-align: center;
+  box-shadow: 0 0 8px rgba(255,45,120,.5);
+}
+
+#sidebar:not(:hover) .nav-label,
+#sidebar:not(:hover) .nav-age,
+#sidebar:not(:hover) .nav-alert { display: none; }
+
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nav-dot.st-ok   { background: var(--green); box-shadow: 0 0 6px rgba(61,255,192,.5); }
+.nav-dot.st-warn { background: var(--amber); box-shadow: 0 0 5px rgba(255,183,0,.4); }
+.nav-dot.st-err  { background: var(--magenta); animation: pulse-m 2s infinite; }
+.nav-dot.st-off  { background: var(--dim); opacity: .5; }
+
+.nav-bottom {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PAGE AREA
+════════════════════════════════════════════════════════════════ */
+.page-area {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: var(--sb-w);   /* reserve the icon-rail gutter */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.page-hdr {
+  flex-shrink: 0;
+  padding: 10px 20px 9px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-breadcrumb {
+  font-size: 9px;
+  color: var(--dim-text);
+  font-family: var(--mono);
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+}
+
+.page-breadcrumb a, .page-breadcrumb .bc-link {
+  color: var(--dim-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.page-breadcrumb a:hover, .page-breadcrumb .bc-link:hover { color: var(--sub); }
+.page-breadcrumb .bc-sep { margin: 0 6px; opacity: .4; }
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: .03em;
+  font-family: var(--mono);
+}
+
+.page-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.page-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.page-content::-webkit-scrollbar { width: 4px; }
+.page-content::-webkit-scrollbar-track { background: transparent; }
+.page-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+
+/* ════════════════════════════════════════════════════════════════
+   OVERVIEW WORKSPACE
+════════════════════════════════════════════════════════════════ */
+.ws-body { padding: 10px 20px 20px; }
+
+/* ─── global KPI strip (the panorama) ───────────────────────── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s3) var(--s4);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border);
+  border-radius: var(--radius-panel);
+  text-decoration: none;
+  transition: border-color .12s, transform .1s, box-shadow .12s;
+}
+
+a.kpi:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(0,0,0,.5); border-color: var(--border-hi); }
+
+.kpi-v {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--text);
+}
+
+.kpi-l {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dim-text);
+  font-family: var(--mono);
+}
+
+.kpi.k-ok   { border-left-color: rgba(61,255,192,.6); }
+.kpi.k-ok   .kpi-v { color: var(--green); }
+.kpi.k-warn { border-left-color: rgba(255,183,0,.7); }
+.kpi.k-warn .kpi-v { color: var(--amber); }
+.kpi.k-crit { border-left-color: var(--magenta); animation: pcrit 3s ease-in-out infinite; }
+.kpi.k-crit .kpi-v { color: var(--magenta); }
+
+.ws-cat-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--dim-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+  font-family: var(--mono);
+}
+
+.ws-cat-label::before { content: '>'; color: var(--cyan); font-size: 10px; }
+
+.ws-cat-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.ws-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--col-min), 1fr));
+  gap: var(--s3);
+  align-items: start;   /* panels size to their content, no row-stretch */
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PANELS
+════════════════════════════════════════════════════════════════ */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s, transform .1s;
+}
+
+.panel.click { cursor: pointer; }
+
+.panel.click:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(0,0,0,.55);
+}
+
+.panel.s-ok   { border-left-color: rgba(61,255,192,.5); }
+.panel.s-warn { border-left-color: rgba(255,183,0,.6); }
+.panel.s-crit { border-left-color: var(--magenta); animation: pcrit 3s ease-in-out infinite; }
+.panel.s-err  { border-left-color: rgba(255,45,120,.4); }
+.panel.s-off  { border-left-color: rgba(58,80,112,.35); opacity: .6; }
+
+@keyframes pcrit {
+  0%,100% { box-shadow: 0 2px 16px rgba(0,0,0,.4); }
+  50% { box-shadow: 0 2px 28px rgba(255,45,120,.16); }
+}
+
+.panel.collapsed > .panel-body,
+.panel.collapsed > :not(.panel-hdr) { display: none; }
+.panel.collapsed .panel-hdr { border-bottom: none; }
+
+.panel-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,.28);
+  flex-shrink: 0;
+}
+
+.panel-hdr-l {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-hdr-r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim-text);
+}
+
+.panel-hdr-r a {
+  color: var(--cyan);
+  text-decoration: none;
+  transition: text-shadow .12s;
+}
+
+.panel-hdr-r a:hover { text-shadow: 0 0 8px rgba(0,212,255,.6); }
+
+.panel-icon {
+  width: 14px; height: 14px;
+  object-fit: contain;
+  opacity: .65;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+}
+
+.panel-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: .06em;
+  background: var(--panel-hi);
+  border: 1px solid var(--border-hi);
+  color: var(--dim-text);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.panel-err-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  font-family: var(--mono);
+  background: var(--mag-bg);
+  color: var(--magenta);
+  border: 1px solid var(--mag-bd);
+  animation: pulse-m 2s infinite;
+  flex-shrink: 0;
+}
+
+.pcol-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--dim-text);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  transition: all .12s;
+  flex-shrink: 0;
+}
+
+.pcol-btn:hover { border-color: var(--border-hi); color: var(--sub); }
+
+.panel-body {
+  padding: 12px;
+  overflow: auto;
+}
+
+/* overview preview sizing lives in the GRID section below (single source) */
+
+/* ════════════════════════════════════════════════════════════════
+   STATUS DOTS
+════════════════════════════════════════════════════════════════ */
+.dot {
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.dot.st-ok   { background: var(--green); box-shadow: 0 0 7px rgba(61,255,192,.6); }
+.dot.st-warn { background: var(--amber); box-shadow: 0 0 6px rgba(255,183,0,.5); }
+.dot.st-err  { background: var(--magenta); animation: pulse-m 2s infinite; }
+.dot.st-off  { background: var(--dim); opacity: .45; }
+.dot.load    { background: var(--dim); animation: blink 1.2s infinite; }
+
+@keyframes blink { 0%,100% { opacity:.2 } 50% { opacity:1 } }
+
+/* ════════════════════════════════════════════════════════════════
+   BADGES
+════════════════════════════════════════════════════════════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-family: var(--mono);
+  border: 1px solid transparent;
+}
+
+.badge.crit, .badge.b-critical, .badge.b-error, .badge.b-high {
+  background: var(--mag-bg); color: var(--magenta); border-color: var(--mag-bd);
+}
+.badge.high {
+  background: var(--high-bg); color: var(--high); border-color: var(--high-bd);
+}
+.badge.med, .badge.b-warning, .badge.b-medium, .badge.b-degraded {
+  background: var(--amb-bg); color: var(--amber); border-color: var(--amb-bd);
+}
+.badge.low, .badge.ok, .badge.b-ok, .badge.b-low, .badge.b-clean, .badge.b-operational {
+  background: var(--grn-bg); color: var(--green); border-color: var(--grn-bd);
+}
+.badge.info, .badge.b-info, .badge.b-undefined, .badge.b-unknown,
+.badge.b-off, .badge.b-stale, .badge.b-source_error, .badge.b-cdn {
+  background: var(--blue-bg); color: var(--blue); border-color: var(--blue-bd);
+}
+.badge.err, .badge.b-err {
+  background: var(--mag-bg); color: var(--magenta); border-color: var(--mag-bd);
+}
+.badge.neu {
+  background: var(--panel-hi); color: var(--sub); border-color: var(--border-hi);
+}
+.badge.b-authority_it, .badge.b-authority_eu, .badge.b-authority_us,
+.badge.b-ip, .badge.b-ipv6, .badge.b-domain, .badge.b-other, .badge.b-dedicated {
+  background: var(--cyan-bg); color: var(--cyan); border-color: var(--cyan-bd);
+}
+.badge.b-threat_intel, .badge.b-vuln_db, .badge.b-hash {
+  background: var(--high-bg); color: var(--high); border-color: var(--high-bd);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   KV GRID (metric readouts inside panels)
+════════════════════════════════════════════════════════════════ */
+.kv-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.kv-item { min-width: 58px; }
+
+.kv-v {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.kv-k {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--dim-text);
+  margin-top: 2px;
+}
+
+.kv-item.kv-ok   .kv-v { color: var(--green); }
+.kv-item.kv-warn .kv-v { color: var(--amber); }
+.kv-item.kv-crit .kv-v { color: var(--magenta); }
+
+/* ════════════════════════════════════════════════════════════════
+   DATA TABLE
+════════════════════════════════════════════════════════════════ */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+th {
+  text-align: left;
+  padding: 5px 10px;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--dim-text);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,.3);
+  position: sticky; top: 0; z-index: 1;
+  white-space: nowrap;
+  font-family: var(--mono);
+}
+
+td {
+  padding: 5px 10px;
+  border-bottom: 1px solid rgba(24,32,48,.65);
+  vertical-align: middle;
+  color: var(--sub);
+}
+
+tbody tr:nth-child(even) td { background: rgba(255,255,255,.01); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(0,212,255,.03) !important; }
+tr.r-crit td { background: rgba(255,45,120,.03); }
+tr.r-crit:hover td { background: rgba(255,45,120,.07) !important; }
+tr.r-high td { background: rgba(255,107,43,.02); }
+
+td a { color: var(--cyan); text-decoration: none; }
+td a:hover { text-decoration: underline; }
+
+.c-mono { font-family: var(--mono); font-size: 11px; }
+.c-dim  { font-size: 11px; color: var(--dim-text); white-space: nowrap; }
+.c-trunc{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* utilities (replace repeated inline styles → CSP-friendly) */
+.muted      { color: var(--dim); }
+.dot-sm     { width: 6px; height: 6px; margin-right: 6px; }
+.asset-type { font-size: 9px; margin-left: 5px; }
+.geo-cell   { font-size: 9px; max-width: 120px; }
+
+/* ════════════════════════════════════════════════════════════════
+   FEED ITEMS
+════════════════════════════════════════════════════════════════ */
+.fi {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(24,32,48,.65);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fi:last-child { border-bottom: none; }
+.fi:hover { background: rgba(0,212,255,.02); }
+
+.fi-title { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.fi-title a { color: inherit; text-decoration: none; }
+.fi-title a:hover { color: var(--cyan); }
+
+.fi-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fi-src  { font-size: 10px; color: var(--cyan); font-family: var(--mono); }
+.fi-time { font-size: 10px; color: var(--dim-text); }
+.fi-empty { padding: 14px 12px; text-align: center; color: var(--dim-text); font-size: 11px; }
+
+.more-row {
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--dim-text);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FILTER CHIPS
+════════════════════════════════════════════════════════════════ */
+/* one filter row for every filterable surface (was dom-filter-row + feed-filter-row) */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 5px var(--s3);
+  background: rgba(0,0,0,.15);
+  border-bottom: 1px solid rgba(24,32,48,.5);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.filter-row::-webkit-scrollbar { display: none; }
+
+.filter-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--dim-text);
+  flex-shrink: 0;
+  margin-right: 2px;
+  font-family: var(--mono);
+}
+
+/* one chip primitive (was dom-chip + fchip) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--s2);
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--dim-text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .1s;
+  font-family: var(--mono);
+}
+
+.chip:hover { border-color: var(--border-hi); color: var(--sub); }
+
+.chip.active {
+  background: var(--cyan-bg);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SECTION TITLE (inside panel)
+════════════════════════════════════════════════════════════════ */
+.sect-title {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--dim-text);
+  padding: 7px 12px 4px;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,.2);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sect-title::before {
+  content: '//';
+  color: var(--cyan);
+  font-size: 9px;
+  opacity: .7;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   INTEL & PROVIDER WIDGETS
+════════════════════════════════════════════════════════════════ */
+.intel-target-list { display: flex; flex-direction: column; }
+
+.intel-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(24,32,48,.5);
+  transition: background .1s;
+}
+
+.intel-target:last-child { border-bottom: none; }
+.intel-target:hover { background: rgba(0,212,255,.025); }
+
+.intel-target-addr {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--text); min-width: 155px; flex-shrink: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.intel-target-type  { font-size: 9px; color: var(--dim-text); flex-shrink: 0; }
+
+.intel-target-meta {
+  flex: 1; display: flex; align-items: center;
+  gap: 8px; flex-wrap: wrap; overflow: hidden;
+}
+
+.intel-target-detail {
+  font-size: 9px; color: var(--dim-text); font-family: var(--mono);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.intel-target-alert {
+  font-size: 9px; font-family: var(--mono);
+  color: var(--magenta); font-weight: 700; flex-shrink: 0;
+}
+
+.intel-empty { padding: 20px 12px; text-align: center; color: var(--dim-text); font-size: 11px; }
+.intel-empty strong { display: block; color: var(--sub); margin-bottom: 2px; }
+
+.eng-cell { display: flex; flex-direction: column; gap: 2px; }
+.eng-meta { font-size: 9px; color: var(--dim-text); font-family: var(--mono); }
+
+/* ════════════════════════════════════════════════════════════════
+   CLOUD / INFRA WIDGET
+════════════════════════════════════════════════════════════════ */
+.infra-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,.2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.infra-sem {
+  width: 34px; height: 34px;
+  border-radius: 50%; flex-shrink: 0;
+  transition: all .35s;
+}
+
+.sem-green { background: var(--green); box-shadow: 0 0 18px rgba(61,255,192,.5); }
+.sem-yellow{ background: var(--amber); box-shadow: 0 0 18px rgba(255,183,0,.5); animation: pulse-a 2s infinite; }
+.sem-red   { background: var(--magenta); box-shadow: 0 0 18px rgba(255,45,120,.7); animation: pulse-m 2s infinite; }
+.sem-dim   { background: var(--dim); opacity: .4; }
+
+.infra-summary { flex: 1; }
+.infra-meta { font-size: 10px; color: var(--dim-text); margin-top: 3px; }
+.infra-grid { display: flex; flex-wrap: wrap; }
+
+.prov-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(24,32,48,.45);
+  border-right: 1px solid rgba(24,32,48,.3);
+  min-height: 32px; flex: 1 1 240px; min-width: 240px;
+}
+
+.prov-row:hover { background: rgba(0,212,255,.02); }
+
+.prov-name {
+  font-size: 11px; font-weight: 600; color: var(--sub);
+  width: 120px; flex-shrink: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.prov-state { font-size: 10px; color: var(--dim-text); flex: 1; }
+.prov-state.ok   { color: var(--green); }
+.prov-state.warn { color: var(--amber); }
+.prov-state.err  { color: var(--magenta); }
+
+.prov-detail {
+  font-size: 9px; color: var(--dim-text); font-family: var(--mono);
+  max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: right; flex-shrink: 0;
+}
+
+.prov-icon  { width: 14px; height: 14px; object-fit: contain; opacity: .75; flex-shrink: 0; }
+.os-icon    { width: 12px; height: 12px; object-fit: contain; opacity: .65; flex-shrink: 0; vertical-align: middle; margin-right: 3px; }
+.kpi-icon   { width: 12px; height: 12px; object-fit: contain; opacity: .5; flex-shrink: 0; vertical-align: middle; margin-right: 3px; }
+
+.bb-group-label {
+  font-size: 8px; font-weight: 700; letter-spacing: .1em; color: var(--dim-text);
+  padding: 6px 12px 3px;
+  background: rgba(24,32,48,.3);
+  border-top: 1px solid rgba(24,32,48,.5);
+  text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LOCKED / OFFLINE STATES
+════════════════════════════════════════════════════════════════ */
+.locked-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 14px 12px; color: var(--dim-text); font-size: 11px;
+}
+
+.locked-note .lock-icon { font-size: 16px; flex-shrink: 0; opacity: .45; line-height: 1.2; }
+.locked-note .lock-body { flex: 1; }
+
+.lock-key {
+  font-family: var(--mono); font-size: 10px; color: var(--cyan);
+  background: var(--cyan-bg); border: 1px solid var(--cyan-bd);
+  padding: 1px 6px; border-radius: 2px;
+  display: inline-block; margin-top: 4px;
+}
+
+.offline-note { color: var(--dim-text); font-family: var(--mono); font-size: 11px; }
+.errline { color: var(--magenta); font-family: var(--mono); font-size: 11px; }
+
+/* ════════════════════════════════════════════════════════════════
+   MISC UTILITIES
+════════════════════════════════════════════════════════════════ */
+.empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--dim-text);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+.empty strong { display: block; color: var(--sub); margin-bottom: 2px; font-size: 12px; }
+
+.state-msg {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px; text-align: center; color: var(--sub);
+}
+
+.state-msg strong {
+  display: block; font-size: 15px;
+  color: var(--text); margin-bottom: 6px;
+  font-family: var(--mono);
+}
+
+.state-msg.err strong { color: var(--magenta); }
+
+.back {
+  display: inline-flex; gap: 6px;
+  color: var(--dim-text); font-size: 11px;
+  cursor: pointer; margin-bottom: 12px;
+  font-family: var(--mono); text-decoration: none;
+}
+
+.back:hover { color: var(--cyan); }
+
+pre.raw {
+  margin-top: 6px;
+  background: #030509;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim-text);
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DETAIL VIEW WRAPPER
+════════════════════════════════════════════════════════════════ */
+.detail-wrap {
+  padding: 16px 20px 24px;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   STATUS FOOTER
+════════════════════════════════════════════════════════════════ */
+.status-footer {
+  flex-shrink: 0;
+  height: 22px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 12px;
+  gap: 0;
+}
+
+.foot-label {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--dim-text);
+  margin-right: 10px;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+.foot-item {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--sub);
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.foot-item b { color: var(--text); }
+.foot-ts { font-size: 9px; color: var(--dim-text); font-family: var(--mono); margin-left: auto; flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════════════════
+   SCAN LINE
+════════════════════════════════════════════════════════════════ */
+@keyframes scanline { 0% { top: -2px } 100% { top: 100% } }
+
+.scan-line {
+  position: fixed; left: 0; right: 0; height: 1px; z-index: 9999;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(0,212,255,.1),
+    rgba(61,255,192,.07),
+    transparent);
+  pointer-events: none;
+  animation: scanline 16s linear infinite;
+}
+
+@keyframes pulse-r { 0%,100% { box-shadow: 0 0 4px rgba(255,45,120,.4); } 50% { box-shadow: 0 0 14px rgba(255,45,120,.9); } }
+
+/* ════════════════════════════════════════════════════════════════
+   CLOUD BAR (below masthead, always visible)
+════════════════════════════════════════════════════════════════ */
+.cloud-bar {
+  flex-shrink: 0;
+  height: 28px;
+  background: rgba(6,9,15,.95);
+  border-bottom: 1px solid var(--border);
+  display: none;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 150;
+}
+
+.cloud-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,.12), transparent);
+}
+
+.cloud-bar::-webkit-scrollbar { display: none; }
+
+.cbar-lbl {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--dim-text);
+  font-family: var(--mono);
+  flex-shrink: 0;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid var(--border);
+}
+
+.cbar-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.cbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 2px;
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--sub);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: all .1s;
+  flex-shrink: 0;
+}
+
+.cbar-pill:hover {
+  background: var(--panel-hi);
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+
+.cbar-pill .cbar-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cbar-pill .cbar-status {
+  color: var(--dim-text);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.cbar-pill.cp-ok    { border-color: rgba(61,255,192,.15); }
+.cbar-pill.cp-warn  { border-color: rgba(255,183,0,.2); }
+.cbar-pill.cp-err   { border-color: rgba(255,45,120,.25); }
+
+.cbar-inc {
+  font-size: 8px;
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* ─── rootmon cluster in masthead ───────────────────────────── */
+.rmon-cluster {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-left: 1px solid var(--border);
+  height: 100%;
+}
+
+.rmon-lbl {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim-text);
+  font-family: var(--mono);
+  margin-right: 3px;
+}
+
+.rmon-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.rmon-dot.st-ok   { background: var(--green); box-shadow: 0 0 5px rgba(61,255,192,.5); }
+.rmon-dot.st-warn { background: var(--amber); }
+.rmon-dot.st-err  { background: var(--magenta); animation: pulse-m 2s infinite; }
+.rmon-dot.st-off  { background: var(--dim); opacity: .4; }
+
+/* ════════════════════════════════════════════════════════════════
+   FLUID GRID — viewport decides the column count (no per-width tuning)
+════════════════════════════════════════════════════════════════ */
+/* content-rich widgets earn 2 tracks */
+.ws-grid .panel.w2 { grid-column: span 2; }
+.ws-grid .panel.w4 { grid-column: span 4; }
+
+/* panels are adaptive: each sizes to its content (previews are row-capped in JS).
+   A generous safety cap turns any pathological overflow into a scroll, not a clip. */
+.ws-grid .panel-body { max-height: var(--panel-prev-h); overflow: auto; }
+.ws-grid .panel-body.pov-kv { max-height: none; overflow: visible; }
+
+/* single fallback: on narrow screens spans collapse to one track */
+@media (max-width: 640px) {
+  .ws-grid { grid-template-columns: 1fr; }
+  .ws-grid .panel.w2,
+  .ws-grid .panel.w4 { grid-column: span 1; }
+}
+</style>
+</head>
+
+<body>
+  <div class="scan-line"></div>
+
+  <header class="masthead">
+    <a class="brand" href="#" onclick="showOverview();return false">
+      <div class="brand-icon">
+        <img src="/icons/logo/icons8-decentralized-network-48.png" alt="CTI">
+      </div>
+      <div class="brand-text">CTI <em>SENTINEL</em></div>
+    </a>
+    <div class="mast-center">
+      <span id="threat-badge" role="button" tabindex="0" aria-live="polite"
+            onclick="goToProblem()" style="cursor:pointer" title="click to inspect alerts"></span>
+    </div>
+    <div class="mast-right">
+      <div id="rootmon-dots" class="rmon-cluster" aria-label="root DNS health"></div>
+      <span class="ts-txt" id="ts-lbl">—</span>
+      <span class="cd-txt">↻ <b id="countdown">—</b></span>
+      <button class="mast-btn" id="refresh-btn" onclick="loadAll(true)" aria-label="sync data now">↻ SYNC</button>
+    </div>
+  </header>
+
+  <div id="cloud-bar" class="cloud-bar"></div>
+
+  <div class="app-body">
+    <nav id="sidebar" aria-label="Sources">
+      <div id="nav-list"></div>
+    </nav>
+
+    <div class="page-area">
+      <div id="page-hdr" class="page-hdr" style="display:none">
+        <div class="page-breadcrumb" id="page-breadcrumb"></div>
+        <div class="page-title-row">
+          <h1 class="page-title" id="page-title"></h1>
+          <div class="page-actions" id="page-actions"></div>
+        </div>
+      </div>
+      <main class="page-content" id="workspace">
+        <div class="state-msg"><strong>Initializing…</strong>Connecting to sources.</div>
+      </main>
+    </div>
+  </div>
+
+  <footer class="status-footer" id="status-footer" aria-live="polite">
+    <span class="foot-label">Status</span>
+    <span class="foot-item">connecting…</span>
+  </footer>
+
+<script>
+/* ── constants ──────────────────────────────────────────────── */
+const META = {
+  atera:        {cat:"API",    link:"https://app.atera.com"},
+  shodan:       {cat:"API",    link:"https://account.shodan.io"},
+  netlas:       {cat:"API",    link:"https://app.netlas.io"},
+  bgp:          {cat:"API",    link:"https://stat.ripe.net"},
+  rootmon:      {cat:"PROBE",  link:"https://root-servers.org"},
+  news_feed:    {cat:"FEED",   link:""},
+  acn_misp:     {cat:"FEED",   link:"https://www.csirt.gov.it"},
+  cloud_status: {cat:"STATUS", link:""},
+  correlation:  {cat:"META",   link:""},
+  opencti:      {cat:"META",   link:""},
+  assets:       {cat:"META",   link:""},
+};
+
+const CAT_ORDER  = ["API","FEED","STATUS","PROBE","META"];
+// cloud_status + rootmon live in the always-visible top bars (cloud strip / masthead
+// DNS dots) — keep them out of the overview grid so nothing is duplicated.
+const GRID_HIDDEN = new Set(["shodan","netlas","correlation","thc_rdns","acn_misp","news_feed","cloud_status","rootmon"]);
+
+const state = {
+  sources:[], data:{}, status:null,
+  view:"overview", next:15, refreshMs:15000,
+  domainFilters:{}, feedFilters:{},
+};
+
+/* ── helpers ────────────────────────────────────────────────── */
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* single-quoted JS string literal, HTML-escaped — safe as an arg inside onclick="…" */
+const jsq = s => esc("'"+String(s==null?"":s).replace(/\\/g,"\\\\").replace(/'/g,"\\'")+"'");
+const j   = async u => (await fetch(u)).json();
+
+function meta(id)    { return META[id]||{cat:"OTHER",link:""}; }
+function catOf(s)    { return String((s.schema&&s.schema.category)||meta(s.id).cat||"OTHER").toUpperCase(); }
+function dotCls(s)   { if(!s.enabled)return"st-off"; if(s.ok)return"st-ok"; return s.error?"st-err":"st-warn"; }
+/* one mapping for the cloud/provider status vocabulary (ok|warning|critical|error) */
+function statusClass(v){ const s=String(v||"").toLowerCase(); return (s==="critical"||s==="error"||s==="diverged")?"st-err":s==="warning"?"st-warn":s==="ok"?"st-ok":"st-off"; }
+/* one mapping for the intel risk vocabulary (critical|high|medium|low|clean) */
+function riskClass(v){ const r=String(v||"").toLowerCase(); return (r==="critical"||r==="high")?"st-err":r==="medium"?"st-warn":(r==="low"||r==="clean")?"st-ok":"st-off"; }
+function badge(v)    { const c=String(v).toLowerCase().replace(/[^a-z_]/g,""); return `<span class="badge b-${c}">${esc(v)}</span>`; }
+function fmtAge(s)   { if(s==null)return"—"; if(s<60)return Math.round(s)+"s"; if(s<3600)return Math.round(s/60)+"m"; return Math.round(s/3600)+"h"; }
+function val(id,k)   { const d=state.data[id]; return d&&d.data?d.data[k]:undefined; }
+function img(path,cls){ return (path&&String(path).startsWith("/icons"))?`<img class="${cls}" src="${path}" onerror="this.style.display='none'">` : ""; }
+function srcIcon(s)  { return (s.schema&&s.schema.icon)||""; }
+
+/* ── load ───────────────────────────────────────────────────── */
+async function loadAll(force) {
+  const btn = document.getElementById("refresh-btn");
+  if (btn) { btn.disabled=true; btn.classList.add("syncing"); }
+  try {
+    const src = await j("/api/sources");
+    state.sources = src.sources;
+    const ds = await Promise.all(state.sources.map(s => j("/api/data/"+s.id).catch(()=>({}))));
+    state.data = {};
+    state.sources.forEach((s,i) => state.data[s.id] = ds[i]);
+    state.status = await j("/api/status").catch(()=>null);
+    render();
+    state.next = state.refreshMs/1000;
+    const tl = document.getElementById("ts-lbl");
+    if (tl) tl.textContent = "updated "+new Date().toLocaleTimeString();
+  } finally {
+    if (btn) { btn.disabled=false; btn.classList.remove("syncing"); }
+  }
+}
+
+/* ── main render ────────────────────────────────────────────── */
+function render() {
+  renderThreatBadge();
+  renderRootmon();
+  renderCloudBar();
+  renderSidebar();
+  renderWorkspace();
+  renderFooter();
+}
+
+/* ── rootmon dots in masthead ───────────────────────────────── */
+function renderRootmon() {
+  const el = document.getElementById("rootmon-dots");
+  if (!el) return;
+  const rows = val("rootmon", "rows");
+  if (!rows || !rows.length) { el.style.display = "none"; return; }
+  el.style.display = "flex";
+  let h = `<span class="rmon-lbl">DNS</span>`;
+  for (const r of rows) {
+    h += `<span class="rmon-dot ${statusClass(r.status)}" title="${esc(r.server+' · '+r.hostname)}"></span>`;
+  }
+  el.innerHTML = h;
+}
+
+/* ── cloud bar (below masthead) ─────────────────────────────── */
+function renderCloudBar() {
+  const el = document.getElementById("cloud-bar");
+  if (!el) return;
+  const rows = val("cloud_status", "rows");
+  if (!rows || !rows.length) { el.style.display = "none"; return; }
+  el.style.display = "flex";
+  let h = `<span class="cbar-lbl">${img("/icons/cloud/icons8-cloud-50.png","prov-icon")} Cloud</span>`;
+  for (const r of rows) {
+    const dc    = statusClass(r.status);
+    const cpCls = "cp-" + dc.slice(3);   // st-err → cp-err, etc.
+    const icon = r.icon ? img(r.icon, "prov-icon") : "";
+    const inc = r.incidents ? `<span class="cbar-inc">${r.incidents}⚠</span>` : "";
+    const tgt = r.page
+      ? `href="${esc(r.page)}" target="_blank" rel="noopener"`
+      : `href="#" onclick="go('cloud_status');return false"`;
+    h += `<a ${tgt} class="cbar-pill ${cpCls}" title="${esc((r.detail||r.status||"").slice(0,80))}">
+      <span class="dot ${dc}" style="width:5px;height:5px;flex-shrink:0"></span>
+      ${icon}<span class="cbar-name">${esc(r.provider)}</span>${inc}
+    </a>`;
+  }
+  el.innerHTML = h;
+}
+
+/* ── threat badge → navigate to worst source ────────────────── */
+function goToProblem() {
+  // Walk sources in priority order: crit → err → warn → any degraded
+  for (const priority of ["crit", "err", "warn"]) {
+    const s = state.sources.find(x =>
+      x.enabled && panelStatus(x, (state.data[x.id]||{}).data) === priority
+    );
+    if (s) { go(s.id); return; }
+  }
+  const degraded = state.sources.find(x => x.enabled && !x.ok);
+  if (degraded) { go(degraded.id); return; }
+  go("about");
+}
+
+/* ── global threat score (one source for badge + KPI strip) ──── */
+function threatScore() {
+  const atRisk  = val("assets","at_risk") || 0;
+  const rFail   = val("rootmon","fail")   || 0;
+  const bgpCrit = (val("bgp","critical")  || []).length;
+  const cloudDeg= val("cloud_status","degraded") || 0;
+  const score   = atRisk + rFail + bgpCrit;
+  const [lvl,word] = score===0 ? ["ok","NOMINAL"] : score<=3 ? ["warn","ELEVATED"] : ["crit","CRITICAL"];
+  return {score, lvl, word, atRisk, rFail, bgpCrit, cloudDeg};
+}
+
+/* ── threat badge (masthead) ────────────────────────────────── */
+function renderThreatBadge() {
+  const el = document.getElementById("threat-badge");
+  if (!el) return;
+  const t = threatScore();
+  el.innerHTML = `<span class="threat-badge thr-${t.lvl}">${esc(t.word)}</span>`;
+}
+
+/* ── global KPI strip (overview panorama) ───────────────────── */
+function kpiStrip() {
+  const t = threatScore();
+  const online = state.sources.filter(s=>s.ok).length;
+  const total  = state.sources.length;
+  const degraded = state.sources.filter(s=>s.enabled && !s.ok).length;
+  const has = id => state.sources.some(s=>s.id===id);
+
+  const sev = (n, warnAt=1, critAt=4) => n>=critAt ? "crit" : n>=warnAt ? "warn" : "ok";
+
+  const tiles = [];
+  tiles.push(["about", degraded?"warn":"ok", `${online}/${total}`, "sources online"]);
+  tiles.push(["__threat", t.lvl, t.word, "threat level"]);
+  if (has("assets"))       tiles.push(["assets",       sev(t.atRisk,1,3),  t.atRisk,   "assets at risk"]);
+  if (has("rootmon"))      tiles.push(["rootmon",      sev(t.rFail,1,4),   t.rFail,    "root DNS failing"]);
+  if (has("bgp"))          tiles.push(["bgp",          sev(t.bgpCrit,1,1), t.bgpCrit,  "BGP critical"]);
+  if (has("cloud_status")) tiles.push(["cloud_status", sev(t.cloudDeg,1,3),t.cloudDeg, "cloud degraded"]);
+
+  const cells = tiles.map(([id,lvl,v,label]) => {
+    const onclick = id==="__threat" ? "goToProblem()" : `go(${jsq(id)})`;
+    return `<a class="kpi k-${lvl}" href="#" onclick="${onclick};return false">
+      <div class="kpi-v">${esc(v)}</div><div class="kpi-l">${esc(label)}</div></a>`;
+  }).join("");
+
+  return `<div class="kpi-strip">${cells}</div>`;
+}
+
+/* ── sidebar ────────────────────────────────────────────────── */
+function renderSidebar() {
+  const el = document.getElementById("nav-list");
+  if (!el) return;
+
+  let h = `<a class="nav-item${state.view==="overview"?" active":""}" href="#" onclick="showOverview();return false">
+    <span class="nav-icon">▦</span>
+    <span class="nav-label">Overview</span>
+  </a>`;
+
+  for (const cat of CAT_ORDER) {
+    const sources = state.sources.filter(x => catOf(x)===cat);
+    if (!sources.length) continue;
+    h += `<div class="nav-group-label"><span class="nav-group-label-text">${esc(cat)}</span></div>`;
+    for (const s of sources) {
+      const active  = s.id===state.view ? " active" : "";
+      const age     = fmtAge((state.data[s.id]||{}).age_s);
+      const icon    = srcIcon(s) ? img(srcIcon(s),"nav-src-icon") : "";
+      const st      = panelStatus(s, (state.data[s.id]||{}).data);
+      const alert   = (st==="crit"||st==="err") ? `<span class="nav-alert">!</span>` : "";
+      h += `<a class="nav-item${active}" href="#" onclick="go('${s.id}');return false">
+        <span class="nav-dot ${dotCls(s)}"></span>
+        ${icon}
+        <span class="nav-label">${esc((s.schema&&s.schema.title)||s.name)}</span>
+        <span class="nav-age">${esc(age)}</span>
+        ${alert}
+      </a>`;
+    }
+  }
+
+  h += `<div class="nav-bottom">
+    <a class="nav-item${state.view==="about"?" active":""}" href="#" onclick="go('about');return false">
+      <span class="nav-icon" style="font-size:11px">ⓘ</span>
+      <span class="nav-label">Status</span>
+    </a>
+  </div>`;
+
+  el.innerHTML = h;
+}
+
+/* ── workspace ──────────────────────────────────────────────── */
+function renderWorkspace() {
+  const ws      = document.getElementById("workspace");
+  const pageHdr = document.getElementById("page-hdr");
+
+  // About page
+  if (state.view==="about") {
+    showPageHdr("CTI Sentinel", "Status & About", "");
+    ws.innerHTML = `<div class="detail-wrap">${aboutHtml()}</div>`;
+    return;
+  }
+
+  // Source detail page
+  if (state.view!=="overview") {
+    const s = state.sources.find(x=>x.id===state.view);
+    if (!s) { pageHdr.style.display="none"; ws.innerHTML=`<div class="empty">unknown source</div>`; return; }
+    const m   = meta(s.id);
+    const ext = m.link ? `<a class="mast-btn" href="${esc(m.link)}" target="_blank" rel="noopener">↗ Console</a>` : "";
+    showPageHdr(
+      `<span class="bc-link" onclick="showOverview()">CTI Sentinel</span>
+       <span class="bc-sep">/</span>
+       ${esc(catOf(s))}
+       <span class="bc-sep">/</span>
+       <span style="color:var(--sub)">${esc((s.schema&&s.schema.title)||s.name)}</span>`,
+      esc((s.schema&&s.schema.title)||s.name),
+      ext
+    );
+    const p = panelHtml(s, true);
+    ws.innerHTML = `<div class="detail-wrap"><div class="panel ${p.cls||''}">${p.hdr}${p.body}</div></div>`;
+    ws.scrollTop = 0;
+    return;
+  }
+
+  // Overview
+  pageHdr.style.display = "none";
+
+  let html = `<div class="ws-body">` + kpiStrip();
+
+  for (const cat of CAT_ORDER) {
+    const sources = state.sources.filter(x => catOf(x)===cat && !GRID_HIDDEN.has(x.id));
+    if (!sources.length) continue;
+    html += `<div class="ws-cat-label">${esc(cat)}</div><div class="ws-grid">`;
+    for (const s of sources) {
+      const p = panelHtml(s, false);
+      html += `<div class="panel click ${p.cls||''}" onclick="go('${s.id}')">${p.hdr}${p.body}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  ws.innerHTML = html;
+}
+
+function showPageHdr(breadcrumbHtml, title, actionsHtml) {
+  const hdr = document.getElementById("page-hdr");
+  hdr.style.display = "";
+  document.getElementById("page-breadcrumb").innerHTML = breadcrumbHtml;
+  document.getElementById("page-title").textContent    = title;
+  document.getElementById("page-actions").innerHTML    = actionsHtml;
+}
+
+/* ── panel status ───────────────────────────────────────────── */
+function panelStatus(s, data) {
+  if (!s.enabled) return "off";
+  if (!s.ok) return s.last_error ? "err" : "warn";
+  if (!data) return "warn";
+  const ar = data.at_risk, fail = data.fail;
+  if (typeof ar==="number" && ar>0) return ar>2?"crit":"warn";
+  if (typeof fail==="number" && fail>0) return fail>3?"crit":"warn";
+  return "ok";
+}
+
+function isPanelCollapsed(id) { return localStorage.getItem("pcol_"+id)==="1"; }
+function togglePanel(id) { localStorage.setItem("pcol_"+id, isPanelCollapsed(id)?"0":"1"); render(); }
+
+/* ── panel builder ──────────────────────────────────────────── */
+function panelHtml(s, full) {
+  const sc      = s.schema||{};
+  const m       = meta(s.id);
+  const payload = state.data[s.id]||{};
+  const data    = payload.data;
+  const ext     = !full && m.link ? `<a href="${esc(m.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="console">↗</a>` : "";
+  const collapsed = !full && isPanelCollapsed(s.id);
+  const colBtn  = !full ? `<button class="pcol-btn" onclick="togglePanel('${s.id}');event.stopPropagation()" title="${collapsed?'expand':'collapse'}">${collapsed?"▶":"▼"}</button>` : "";
+
+  const hdr = `<div class="panel-hdr">
+    <div class="panel-hdr-l">
+      <span class="dot ${dotCls(s)}"></span>
+      ${img(srcIcon(s),"panel-icon")}
+      <span class="panel-title">${esc(sc.title||s.name)}</span>
+      <span class="panel-pill">${esc(catOf(s))}</span>
+    </div>
+    <div class="panel-hdr-r">
+      ${full ? `every ${esc(s.interval)}s · age ${fmtAge(payload.age_s)}` : fmtAge(payload.age_s)}
+      ${ext}${colBtn}
+    </div>
+  </div>`;
+
+  const st = panelStatus(s, data);
+  if (collapsed) return {hdr, body:"", cls:`s-${st} collapsed`};
+
+  let body = "";
+
+  if (!s.enabled) {
+    const reqs = s.requires||[];
+    if (reqs.length && s.error && s.error.includes("missing config")) {
+      body = `<div class="locked-note"><span class="lock-icon">🔒</span>
+        <div class="lock-body">Requires API key — set in <code>config.yaml</code> under <code>sources.${esc(s.id)}</code>:<br>
+        ${reqs.map(k=>`<span class="lock-key">${esc(k)}</span>`).join(" ")}</div></div>`;
+    } else {
+      body = `<div class="panel-body"><div class="offline-note">OFF — ${esc(s.error||"disabled")}. Configure in config.yaml to enable.</div></div>`;
+    }
+  } else if (!data) {
+    body = `<div class="panel-body"><div class="errline">${esc(payload.error||s.error||"no data yet")}</div></div>`;
+  } else {
+    const keys   = sc.summary_keys||[];
+    const kvWrap = keys.length
+      ? `<div class="panel-body pov-kv"><div class="kv-grid">${keys.map(k => {
+          const v = data[k]; const vs = v==null?"—":v;
+          return `<div class="kv-item"><div class="kv-v">${esc(vs)}</div><div class="kv-k">${esc(k.replace(/_/g," "))}</div></div>`;
+        }).join("")}</div></div>`
+      : "";
+
+    const domFilter   = full && sc.domain_filter;
+    const activeFilter= domFilter ? (state.domainFilters[s.id]||{}).val||null : null;
+    let filterBar = "";
+    let sect = "";
+
+    if (sc.widget==="intel") {
+      sect = intelWidget(sc, data, full);
+    } else if (sc.widget==="providerbar") {
+      sect = providerBar(data, full);
+    } else if (sc.widget==="feeds") {
+      sect = feedsWidget(sc, s.id, data, full);
+    } else if (sc.sections) {
+      if (domFilter) {
+        const allVals = new Set();
+        for (const se of sc.sections) {
+          const fk = se.table && se.table.filter_key;
+          if (fk) (data[se.table.rows_key]||[]).forEach(r=>{ if(r[fk]) allVals.add(r[fk]); });
+        }
+        const vals = [...allVals].sort();
+        if (vals.length>1) {
+          filterBar = `<div class="filter-row"><span class="filter-label">Filter</span>
+            <span role="button" tabindex="0" class="chip${!activeFilter?" active":""}" onclick="setDomFilter(${jsq(s.id)},null)">All</span>`
+            + vals.map(v=>`<span role="button" tabindex="0" class="chip${activeFilter===v?" active":""}" onclick="setDomFilter(${jsq(s.id)},${jsq(v)})">${esc(v)}</span>`).join("")
+            + `</div>`;
+        }
+      }
+      for (const se of sc.sections) {
+        const fk = se.table && se.table.filter_key;
+        sect += `<div class="sect-title">${esc(se.title)}</div>` + tableHtml(se.table, data, full, fk&&activeFilter?fk:null, activeFilter);
+      }
+    } else if (sc.table) {
+      if (domFilter) {
+        const fk = sc.table.filter_key;
+        if (fk) filterBar = domainFilterChips(s.id, data[sc.table.rows_key]||[], fk);
+      }
+      const fk = sc.table.filter_key;
+      sect = tableHtml(sc.table, data, full, fk&&activeFilter?fk:null, activeFilter);
+    }
+
+    const noWrap = sc.widget==="intel" || sc.widget==="providerbar" || sc.widget==="feeds";
+    if (noWrap) {
+      body = kvWrap + (filterBar||"") + sect;
+    } else if (filterBar) {
+      body = kvWrap + filterBar + `<div class="panel-body" style="padding-top:0">${sect}</div>`;
+    } else {
+      body = kvWrap + `<div class="panel-body">${sect}</div>`;
+    }
+  }
+
+  // wide widget classes for overview grid spanning
+  const wideWidgets = new Set(["intel","feeds","providerbar"]);
+  const spanCls = wideWidgets.has(sc.widget) ? " w2" : "";
+
+  return {hdr, body, cls:`s-${st}${spanCls}`};
+}
+
+/* ── table builder ──────────────────────────────────────────── */
+function tableHtml(t, data, full, filterKey, filterVal) {
+  let rows = data[t.rows_key]||[];
+  if (filterKey&&filterVal) rows = rows.filter(r=>r[filterKey]===filterVal);
+  const PREV = 4;
+  const show = full ? rows : rows.slice(0, PREV);
+  let h = `<table><thead><tr>${t.columns.map(c=>`<th>${esc(c.label)}</th>`).join("")}</tr></thead><tbody>`;
+  if (!show.length) h += `<tr><td colspan="${t.columns.length}" class="empty">no rows</td></tr>`;
+  for (const r of show) {
+    h += "<tr>" + t.columns.map(c => {
+      let v = r[c.key]; if (v==null) v="";
+      const ic = c.icon_key&&r[c.icon_key] ? img(r[c.icon_key],"prov-icon") : "";
+      if (c.badge) { v = ic+badge(v); }
+      else {
+        let txt = (c.link_key&&r[c.link_key])
+          ? `<a href="${esc(r[c.link_key])}" target="_blank" rel="noopener">${esc(v)}</a>`
+          : esc(v);
+        v = ic ? `<span style="display:inline-flex;align-items:center;gap:6px">${ic}${txt}</span>` : txt;
+      }
+      return `<td>${v}</td>`;
+    }).join("") + "</tr>";
+  }
+  h += `</tbody></table>`;
+  if (!full && rows.length>PREV) h += `<div class="more-row">+${rows.length-PREV} more — open panel →</div>`;
+  return h;
+}
+
+/* ── domain filter chips ────────────────────────────────────── */
+function domainFilterChips(sid, allRows, filterKey) {
+  const active = (state.domainFilters[sid]||{}).val;
+  const vals   = [...new Set(allRows.map(r=>r[filterKey]).filter(Boolean))].sort();
+  if (vals.length<=1) return "";
+  return `<div class="filter-row"><span class="filter-label">Domain</span>`
+    + `<span role="button" tabindex="0" class="chip${!active?" active":""}" onclick="setDomFilter(${jsq(sid)},null)">All</span>`
+    + vals.map(v=>`<span role="button" tabindex="0" class="chip${active===v?" active":""}" onclick="setDomFilter(${jsq(sid)},${jsq(v)})">${esc(v)}</span>`).join("")
+    + `</div>`;
+}
+
+function setDomFilter(sid, v) { state.domainFilters[sid]={val:v}; render(); }
+
+function setFeedFilter(sid, dim, v) {
+  if (!state.feedFilters[sid]) state.feedFilters[sid]={};
+  state.feedFilters[sid][dim] = v;
+  render();
+}
+
+/* ── feeds widget ───────────────────────────────────────────── */
+function feedsWidget(sc, sid, data, full) {
+  const rows = (data&&data.rows)||[];
+  const ff   = state.feedFilters[sid]||{};
+  let filtered = rows;
+  if (ff.type) filtered = filtered.filter(r=>r.type===ff.type);
+  if (ff.cat)  filtered = filtered.filter(r=>r.category===ff.cat);
+
+  const types = [...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
+  const cats  = [...new Set(rows.map(r=>r.category).filter(Boolean))].sort();
+  let chips = "";
+
+  if (full) {
+    if (types.length>1) {
+      chips += `<div class="filter-row"><span class="filter-label">Type</span>
+        <span role="button" tabindex="0" class="chip${!ff.type?" active":""}" onclick="setFeedFilter(${jsq(sid)},'type',null)">All</span>`
+        + types.map(t=>`<span role="button" tabindex="0" class="chip${ff.type===t?" active":""}" onclick="setFeedFilter(${jsq(sid)},'type',${jsq(t)})">${esc(t)}</span>`).join("")
+        + `</div>`;
+    }
+    if (cats.length>1) {
+      chips += `<div class="filter-row"><span class="filter-label">Category</span>
+        <span role="button" tabindex="0" class="chip${!ff.cat?" active":""}" onclick="setFeedFilter(${jsq(sid)},'cat',null)">All</span>`
+        + cats.map(c=>`<span role="button" tabindex="0" class="chip${ff.cat===c?" active":""}" onclick="setFeedFilter(${jsq(sid)},'cat',${jsq(c)})">${esc(c.replace(/_/g," "))}</span>`).join("")
+        + `</div>`;
+    }
+  } else if (cats.length>1) {
+    chips += `<div class="filter-row" style="padding:4px var(--s3)"><span class="filter-label">Cat</span>
+      <span role="button" tabindex="0" class="chip${!ff.cat?" active":""}" onclick="event.stopPropagation();setFeedFilter(${jsq(sid)},'cat',null)">All</span>`
+      + cats.map(c=>`<span role="button" tabindex="0" class="chip${ff.cat===c?" active":""}" onclick="event.stopPropagation();setFeedFilter(${jsq(sid)},'cat',${jsq(c)})">${esc(c.replace(/_/g," "))}</span>`).join("")
+      + `</div>`;
+  }
+
+  const PREV = 4;
+  const show = full ? filtered : filtered.slice(0, PREV);
+  if (!show.length) return chips+`<div class="fi-empty">no items match filters</div>`;
+
+  let h = chips;
+  for (const item of show) {
+    const typeClr = item.type==="misp"?"var(--magenta)":item.type==="advisory"?"var(--amber)":"var(--cyan)";
+    const catIcon = item.category_icon ? img(item.category_icon,"kpi-icon") : "";
+    const titleEl = item.link
+      ? `<a href="${esc(item.link)}" target="_blank" rel="noopener">${esc(item.title)}</a>`
+      : esc(item.title);
+    const extra   = item.extra ? `<span style="font-size:9px;color:var(--magenta);margin-left:6px">${esc(item.extra)}</span>` : "";
+    const tlBadge = item.threat_level ? badge(item.threat_level) : "";
+    h += `<div class="fi">
+      <div class="fi-title">${titleEl}${extra}</div>
+      <div class="fi-meta">
+        <span style="font-size:9px;font-family:var(--mono);font-weight:700;color:${typeClr}">${esc(item.type)}</span>
+        ${catIcon}<span class="fi-src">${esc(item.source)}</span>
+        ${tlBadge}
+        <span class="fi-time">${esc(item.published||"")}</span>
+      </div>
+    </div>`;
+  }
+  if (!full && filtered.length>PREV) h += `<div class="more-row">+${filtered.length-PREV} more — open →</div>`;
+  return h;
+}
+
+/* ── intel widget ───────────────────────────────────────────── */
+function intelWidget(sc, data, full) {
+  const rows = (data&&data.rows)||[];
+  const show = full ? rows : rows.slice(0, 5);
+
+  function engCell(risk, ports, vulns) {
+    if (!risk||risk==="—") return `<span class="muted">—</span>`;
+    return `<div class="eng-cell">${badge(risk)}<span class="eng-meta">${ports!=="—"?ports+"p":""} ${vulns!=="—"?vulns+"v":""}</span></div>`;
+  }
+
+  let h = "";
+  if (show.length) {
+    h += `<table><thead><tr><th>Asset</th><th>DNS</th><th>Country / Org</th><th>Shodan</th><th>Netlas</th><th>Max</th></tr></thead><tbody>`;
+    for (const r of show) {
+      const risk = String(r.max_risk||"").toLowerCase();
+      const dc   = riskClass(risk);
+      const rowCls = risk==="critical"?" r-crit":risk==="high"?" r-high":"";
+      const dnsVal  = (r.dns&&r.dns!=="—"&&r.dns!=="self (ip)") ? r.dns : "—";
+      const typeClr = r.type==="ip"?"var(--cyan)":"var(--blue)";
+      const geo     = [r.country,r.org].filter(v=>v&&v!=="—").join(" · ");
+      const fsTitle = r.first_seen ? `Monitoring since: ${r.first_seen}` : "";
+      h += `<tr class="${rowCls.trim()}" title="${esc(fsTitle)}">
+        <td><span class="dot dot-sm ${dc}"></span><span class="c-mono">${esc(r.asset)}</span><span class="asset-type" style="color:${typeClr}">${esc(r.type||"")}</span></td>
+        <td class="c-dim">${esc(dnsVal)}</td>
+        <td class="c-dim c-trunc geo-cell" title="${esc(geo)}">${esc(geo||"—")}</td>
+        <td>${engCell(r.shodan_risk,r.shodan_ports,r.shodan_vulns)}</td>
+        <td>${engCell(r.netlas_risk,r.netlas_ports,r.netlas_vulns)}</td>
+        <td>${r.max_risk&&r.max_risk!=="—"?badge(r.max_risk):`<span class="muted">—</span>`}</td>
+      </tr>`;
+    }
+    h += `</tbody></table>`;
+    if (!full && rows.length>8) h += `<div class="more-row">+${rows.length-8} more — open →</div>`;
+  } else if (!full) {
+    h = `<div class="intel-empty"><strong>no targets yet</strong>add IPs/domains from Assets tab or assets.yaml</div>`;
+  }
+
+  if (full) {
+    const targets = rows.map(r=>r.asset);
+    h += `<div class="sect-title">Manage Targets</div><div style="padding:8px 16px 14px">`;
+    if (targets.length) {
+      h += `<div style="margin-bottom:10px">`;
+      for (const t of targets) {
+        h += `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text);flex:1">${esc(t)}</span>
+          <button onclick="rmTarget(${jsq(t)})" style="background:none;border:none;color:var(--dim-text);cursor:pointer;font-size:14px;padding:0 4px" title="remove" aria-label="remove ${esc(t)}">×</button>
+        </div>`;
+      }
+      h += `</div>`;
+    } else {
+      h += `<div style="margin-bottom:10px;font-family:var(--mono);font-size:11px;color:var(--dim-text)">no targets configured yet</div>`;
+    }
+    h += `<div style="display:flex;gap:6px">
+      <input id="tgt-new" type="text" placeholder="IP or domain to monitor…"
+        style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:3px;outline:none"
+        onkeydown="if(event.key==='Enter')addTarget()">
+      <button class="mast-btn" onclick="addTarget()">+ Add</button>
+    </div></div>`;
+  }
+  return h;
+}
+
+/* ── provider bar widget ────────────────────────────────────── */
+function providerBar(data, full) {
+  const rows = (data&&data.rows)||[];
+  if (!rows.length) return `<div class="intel-empty"><strong>no provider data yet</strong></div>`;
+  let h = `<div class="intel-target-list">`;
+  for (const r of rows) {
+    const dc   = statusClass(r.status);
+    const icon = r.icon ? img(r.icon,"prov-icon") : "";
+    const name = r.page
+      ? `<a href="${esc(r.page)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${esc(r.provider)}</a>`
+      : esc(r.provider);
+    const inc    = r.incidents ? ` <span class="intel-target-alert">${r.incidents} incident${r.incidents>1?"s":""}</span>` : "";
+    const detail = r.detail ? `<span class="intel-target-detail">${esc(String(r.detail).slice(0,80))}</span>` : "";
+    h += `<div class="intel-target">
+      <span class="dot ${dc}" style="width:7px;height:7px"></span>
+      ${icon}
+      <span class="intel-target-addr">${name}:</span>
+      <span class="intel-target-type">${esc(r.region||"")}</span>
+      <div class="intel-target-meta">${badge(r.status||"—")}${inc}${detail}</div>
+    </div>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
+/* ── about / status page ────────────────────────────────────── */
+function aboutHtml() {
+  const st = state.status;
+  if (!st) return `<div class="empty">status unavailable</div>`;
+
+  const info = [
+    ["version",st.version], ["uptime",Math.round(st.uptime_s/60)+" min"],
+    ["python",st.python], ["platform",st.platform],
+    ["bind",st.host+":"+st.port], ["debug",String(st.debug)],
+    ["sources",`${st.sources_ok}/${st.sources_total} ok`], ["now",st.now],
+  ];
+
+  let h = `<div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-hdr-l">
+        ${img("/icons/security/icons8-cyber-security-1-50.png","panel-icon")}
+        <span class="panel-title">System Status — CTI Sentinel</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="kv-grid">${info.map(([k,v])=>`<div class="kv-item"><div class="kv-v" style="font-size:14px">${esc(v)}</div><div class="kv-k">${esc(k)}</div></div>`).join("")}</div>`;
+
+  const ci = st.config_issues||[], re = st.runtime_errors||[];
+  h += `</div><div class="sect-title">Config Issues (${ci.length})</div>`;
+  h += ci.length
+    ? `<div class="panel-body">${ci.map(x=>`<div class="errline">⚠ <b>${esc(x.source)}</b> — ${esc(x.detail)}</div>`).join("")}</div>`
+    : `<div class="panel-body"><div class="offline-note">none — all enabled sources configured</div></div>`;
+  h += `<div class="sect-title">Runtime Errors (${re.length})</div>`;
+  h += re.length
+    ? `<div class="panel-body">${re.map(x=>`<div class="errline">✖ <b>${esc(x.source)}</b> — ${esc(x.detail)}</div>`).join("")}</div>`
+    : `<div class="panel-body"><div class="offline-note">none — all active sources fetching ok</div></div>`;
+  h += `<div class="sect-title">Sources</div>
+    <table><thead><tr><th>Source</th><th>State</th><th>Interval</th><th>Last Fetch</th><th>Detail</th></tr></thead><tbody>`;
+  for (const s of st.sources) {
+    const stt = !s.enabled?"off":s.ok?"ok":"error";
+    h += `<tr><td>${esc(s.name)}</td><td>${badge(stt)}</td><td class="c-dim">${esc(s.interval)}s</td><td class="c-dim">${esc(s.last_fetch||"—")}</td><td class="c-dim">${esc(s.error||"")}</td></tr>`;
+  }
+  h += `</tbody></table></div>`;
+  return h;
+}
+
+/* ── footer ─────────────────────────────────────────────────── */
+function renderFooter() {
+  const online   = state.sources.filter(s=>s.ok).length;
+  const total    = state.sources.length;
+  const degraded = state.sources.filter(s=>s.enabled&&!s.ok).map(s=>(s.schema&&s.schema.title)||s.name);
+  const off      = state.sources.filter(s=>!s.enabled).length;
+  const crit     = [];
+  const bgp = val("bgp","critical"); if (bgp&&bgp.length) crit.push(`${bgp.length} BGP critical`);
+  const cd  = val("cloud_status","degraded"); if (cd) crit.push(`${cd} cloud degraded`);
+  const rf  = val("rootmon","fail"); if (rf) crit.push(`${rf} root DNS failing`);
+  const ar  = val("assets","at_risk"); if (ar) crit.push(`${ar} assets at risk`);
+
+  document.getElementById("status-footer").innerHTML =
+    `<span class="foot-label">Status</span>`
+    + `<span class="foot-item"><b>${online}/${total}</b> online</span>`
+    + `<span class="foot-item">${degraded.length} degraded${degraded.length?": "+esc(degraded.join(", ")):""}</span>`
+    + `<span class="foot-item">${off} off</span>`
+    + (crit.length
+      ? `<span class="foot-item" style="color:var(--magenta)">⚠ ${esc(crit.join(" · "))}</span>`
+      : `<span class="foot-item" style="color:var(--green)">no critical signals</span>`);
+}
+
+/* ── navigation ─────────────────────────────────────────────── */
+function go(id) {
+  if (id==="overview") { showOverview(); return; }
+  state.view = id;
+  render();
+  const pc = document.querySelector(".page-content");
+  if (pc) pc.scrollTop = 0;
+}
+
+function showOverview() { state.view="overview"; render(); }
+
+/* ── targets ────────────────────────────────────────────────── */
+async function addTarget() {
+  const inp = document.getElementById("tgt-new");
+  const v   = (inp?inp.value:"").trim();
+  if (!v) return;
+  const r = await fetch("/api/targets",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({add:[v],remove:[]})});
+  if (r.ok) { if (inp) inp.value=""; loadAll(true); }
+  else { const e=await r.json().catch(()=>({})); alert("Error: "+(e.detail||r.status)); }
+}
+
+async function rmTarget(addr) {
+  if (!confirm("Remove "+addr+"?")) return;
+  const r = await fetch("/api/targets",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({add:[],remove:[addr]})});
+  if (r.ok) loadAll(true);
+  else { const e=await r.json().catch(()=>({})); alert("Error: "+(e.detail||r.status)); }
+}
+
+/* ── init ───────────────────────────────────────────────────── */
+/* keyboard activation for any role="button" element (chips, threat badge) */
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if ((e.key==="Enter"||e.key===" ") && t && t.getAttribute && t.getAttribute("role")==="button") {
+    e.preventDefault();
+    t.click();
+  }
+});
+
+setInterval(()=>{
+  state.next--;
+  const el = document.getElementById("countdown");
+  if (el) el.textContent = state.next>0 ? state.next+"s" : "…";
+  if (state.next<=0) loadAll();
+}, 1000);
+
+loadAll();
+</script>
+</body>
+</html>

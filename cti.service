@@ -1,0 +1,49 @@
+# CTI Sentinel / OmniCheck — single hardened systemd unit (non-root).
+#
+# One-time setup on the host:
+#   sudo useradd --system --home /opt/cti --shell /usr/sbin/nologin cti
+#   sudo chown -R cti:cti /opt/cti
+#   sudo install -o cti -g cti -m 600 /opt/cti/.env /opt/cti/.env   # secrets, 0600
+#   sudo install -d -o cti -g cti /opt/cti/state                    # persistence
+#   sudo cp cti.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now cti
+# Deploy thereafter:  python deploy.py
+[Unit]
+Description=CTI Sentinel / OmniCheck (sources + scheduler + dashboard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cti
+Group=cti
+WorkingDirectory=/opt/cti
+EnvironmentFile=-/opt/cti/.env
+ExecStart=/opt/cti/.venv/bin/python -m cti
+Restart=on-failure
+RestartSec=5
+
+# ── hardening ──────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cti/state
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

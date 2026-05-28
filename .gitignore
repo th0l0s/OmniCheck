@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+logs/
+.env
+*.log
+*.private
+# local-only / scratch
+targets.json
+cti_legacy_backup.zip
+design/_duplicates/
+design/test_cat/
+_*.py
+state/
+.ruff_cache/
+.pytest_cache/
+.claude/
+.obsidian/  
+.vscode/
+.pytests_cache/
+tests/__pycache__/    
+int/
+  

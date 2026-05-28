@@ -1,0 +1,70 @@
+# CTI Sentinel — single source of truth for credentials and cadences.
+# Values may reference the environment with ${VAR}. Copy real secrets into the
+# environment (or a .env loaded by your service manager); never commit them.
+#
+# Each source block: enabled (default true), interval (seconds, overrides the
+# source default), plus source-specific keys. A source whose REQUIRES keys are
+# empty is skipped automatically and shown as disabled in the dashboard.
+
+debug: false
+# Safe default: loopback only. Set 0.0.0.0 to expose on the LAN/VPN — and then
+# set CTI_API_KEY so mutating endpoints (POST /api/refresh) require a key.
+# The deployed host keeps its own config.yaml; deploy.py does not overwrite it.
+host: 127.0.0.1
+port: 9000
+
+sources:
+  # ── no credentials needed ─────────────────────────────────────────────
+  bgp:
+    enabled: true
+    interval: 1800
+    # targets: optional override; omit to use the baked-in Italian-ISP seed.
+
+  rootmon:
+    enabled: true
+    interval: 120
+
+  news_feed:
+    enabled: true
+    interval: 1800
+    # opml_urls: optional list override.
+
+  acn_misp:
+    enabled: true
+    interval: 900
+
+  cloud_status:
+    enabled: true
+    interval: 300
+    # providers: optional override; omit to use the European-first default set
+    # (OVHcloud, Hetzner, Scaleway, Cloudflare, DigitalOcean, Linode, GCP).
+    # Each entry: {name, type: statuspage|gcp, url, region}
+
+  correlation:
+    enabled: true
+    interval: 600
+
+  opencti:
+    enabled: true
+    interval: 1800
+    dry_run: true
+    url: ${OPENCTI_URL}
+    token: ${OPENCTI_TOKEN}
+
+  # ── require an API key + targets ──────────────────────────────────────
+  shodan:
+    enabled: true
+    interval: 86400
+    api_key: ${SHODAN_API_KEY}
+    targets: []          # e.g. ["8.8.8.8", "1.1.1.1"]
+
+  netlas:
+    enabled: true
+    interval: 86400
+    api_key: ${NETLAS_API_KEY}
+    targets: []
+
+  atera:
+    enabled: true
+    interval: 120
+    api_key: ${ATERA_API_KEY}
