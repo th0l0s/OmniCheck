@@ -27,7 +27,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, registry, scheduler, store
+from . import __version__, config, registry, scheduler, store, tools
 from .auth import require_api_key
 from .core import Ctx, RefreshGate, TTLCache, setup_logging
 
@@ -98,7 +98,12 @@ async def api_sources():
         except Exception as exc:
             sch = {"title": s.name, "error": str(exc)}
         out.append({**s.health(), "schema": sch})
-    return {"version": __version__, "count": len(out), "sources": out}
+    return {
+        "version": __version__,
+        "count": len(out),
+        "layers": {"0": "essentials", "1": "check", "2": "info"},
+        "sources": out,
+    }
 
 
 @app.get("/api/ui")
@@ -130,18 +135,15 @@ async def api_status():
     config_issues, runtime_errors = [], []
     sources = []
     for s in STATES.values():
-        sources.append({
-            "id": s.id, "name": s.name, "enabled": s.enabled, "ok": s.ok,
-            "interval": s.interval, "last_fetch": s.last_fetch, "error": s.last_error,
-            "requires": s.requires,
-        })
+        h = s.health()  # includes layer/kind/overview
+        sources.append(h)
         if not s.enabled and s.last_error and "missing config" in (s.last_error or ""):
             config_issues.append({"source": s.id, "detail": s.last_error})
         elif s.enabled and not s.ok and s.last_error:
             runtime_errors.append({"source": s.id, "detail": s.last_error})
     up = int(time.time() - _STARTED)
     return {
-        "app": "CTI Sentinel",
+        "app": "OmniCheck Cockpit",
         "version": __version__,
         "debug": bool(CFG.get("debug")),
         "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -174,6 +176,67 @@ async def api_data(source_id: str):
         "error": state.last_error,
         "data": data,
     }
+
+
+_SECRET_HINT = ("key", "token", "secret", "password", "passwd", "auth", "cookie")
+
+
+def _redact(scfg: dict) -> dict:
+    """Per-source config with secret-looking values masked. Never leak credentials
+    to the dashboard — show that a key is set, not what it is."""
+    out: dict = {}
+    for k, v in (scfg or {}).items():
+        kl = str(k).lower()
+        if isinstance(v, str) and v and any(h in kl for h in _SECRET_HINT):
+            out[k] = "•••• (set)"
+        elif isinstance(v, dict):
+            out[k] = _redact(v)
+        else:
+            out[k] = v
+    return out
+
+
+@app.get("/api/source/{source_id}/detail")
+async def api_source_detail(source_id: str):
+    """Substatus payload: how the engine works (docstring), its redacted config,
+    recent significant log lines, and any browser-runnable tools it declares."""
+    state = STATES.get(source_id)
+    if state is None:
+        raise HTTPException(404, f"unknown source: {source_id}")
+    try:
+        sch = state.module.schema()
+    except Exception:
+        sch = {}
+    logic = (getattr(state.module, "__doc__", "") or "").strip()
+    scfg = config.source_cfg(CFG, source_id)
+    return {
+        "id": source_id,
+        "name": state.name,
+        "layer": state.layer,
+        "kind": state.kind,
+        "logic": logic,
+        "config": _redact(scfg),
+        "events": store.tail_events(source_id, limit=20),
+        "tools": sch.get("tools", []),
+    }
+
+
+@app.get("/api/tools")
+async def api_tools():
+    """Descriptors for every allowlisted diagnostic tool + whether it's installed."""
+    return {"tools": tools.available()}
+
+
+class _ToolIn(BaseModel):
+    target: str
+    extra: str | None = None
+
+
+@app.post("/api/tool/{name}")
+async def api_tool_run(name: str, payload: _ToolIn, _: None = Depends(require_api_key)):
+    """Run one allowlisted, read-only diagnostic. Requires X-API-Key. Arguments
+    are validated and passed as an argv list — never a shell string."""
+    return await tools.run(name, payload.target, payload.extra)
 
 
 class _TargetsIn(BaseModel):

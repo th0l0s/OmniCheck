@@ -7,11 +7,19 @@ export async function fetchJSON(url) {
   return r.json();
 }
 
+export async function loadDetail(id) {
+  if (!id) return;
+  try {
+    STATE.detail[id] = await fetchJSON("/api/source/" + id + "/detail");
+  } catch (e) {
+    STATE.detail[id] = { error: String(e) };
+  }
+}
+
 export async function loadAll() {
   const btn = document.getElementById("refresh-btn");
-  if (btn) { btn.disabled = true; btn.classList.add("syncing"); }
+  if (btn) { btn.disabled = true; btn.textContent = "↻ …"; }
   try {
-    /* /api/ui first — it configures poll interval and readonly mode */
     const [uiConf, src] = await Promise.all([
       fetchJSON("/api/ui").catch(() => STATE.ui),
       fetchJSON("/api/sources"),
@@ -27,11 +35,13 @@ export async function loadAll() {
     STATE.sources.forEach((s, i) => { STATE.data[s.id] = ds[i]; });
 
     STATE.status = await fetchJSON("/api/status").catch(() => null);
+    if (!STATE.tools.length)
+      STATE.tools = (await fetchJSON("/api/tools").catch(() => ({ tools: [] }))).tools || [];
     STATE.next = STATE.refreshMs / 1000;
 
     const tl = document.getElementById("ts-lbl");
-    if (tl) tl.textContent = "updated " + new Date().toLocaleTimeString();
+    if (tl) tl.textContent = new Date().toLocaleTimeString();
   } finally {
-    if (btn) { btn.disabled = false; btn.classList.remove("syncing"); }
+    if (btn) { btn.disabled = false; btn.textContent = "↻ SYNC"; }
   }
 }

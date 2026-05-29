@@ -333,4 +333,9 @@ def schema() -> dict:
                 },
             },
         ],
+        "tools": [
+            {"tool": "host", "label": "host (reverse DNS)", "arg": "1.1.1.1"},
+            {"tool": "dig", "label": "dig PTR", "arg": "1.1.1.1", "extra": "PTR"},
+            {"tool": "whois", "label": "whois", "arg": "example.com"},
+        ],
     }

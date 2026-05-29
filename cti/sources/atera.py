@@ -107,4 +107,7 @@ def schema() -> dict:
                     {"key": "created", "label": "When"},
                 ]}},
         ],
+        "layer": 1,
+        "kind": "configured_api",
+        "overview": True,
     }

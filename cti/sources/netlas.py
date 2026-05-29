@@ -134,4 +134,7 @@ def schema() -> dict:
                 {"key": "vuln_count", "label": "Vulns",   "numeric": True},
             ],
         },
+        "layer": 1,
+        "kind": "configured_api",
+        "overview": True,
     }

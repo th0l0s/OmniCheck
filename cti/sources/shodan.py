@@ -140,4 +140,7 @@ def schema() -> dict:
                 {"key": "country",    "label": "Country"},
             ],
         },
+        "layer": 1,
+        "kind": "configured_api",
+        "overview": True,
     }

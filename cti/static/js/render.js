@@ -1,213 +1,330 @@
 /* render.js — DOM mutation. Reads STATE, calls components, writes innerHTML. */
-import { STATE, META, CAT_ORDER, GRID_HIDDEN } from './state.js';
+import { STATE, SPIE } from './state.js';
 import {
-  esc, jsq, fmtAge, img, val,
-  dotCls, statusClass, catOf, srcIcon, panelStatus,
-  panelHtml, kpiStrip, threatScore, aboutHtml,
+  esc, jsq, fmtAge, badge, led, img,
+  monitorCard, summaryCards, tableHtml, filterChips,
+  intelWidget, providerBar, feedsWidget,
+  sourceStatus, layerOf, kindOf, overviewOf, isConfigured,
+  sourcesByLayer, globalStatus, layerLabel,
+  spie, logicBlock, configBlock, eventsBlock, toolRunner,
 } from './components.js';
 
+/* ── Top-level render ───────────────────────────────────────── */
 export function render() {
-  renderThreatBadge();
-  renderRootmon();
-  renderCloudBar();
-  renderSidebar();
-  renderWorkspace();
-  renderFooter();
-  _updateTopbar();
+  _topbar();
+  _sidebar();
+  _content();
 }
 
-function _updateTopbar() {
-  const online = STATE.sources.filter(s => s.ok).length;
-  const total  = STATE.sources.length;
+/* ── Topbar ─────────────────────────────────────────────────── */
+function _topbar() {
+  const gst = globalStatus();
+  const gl = document.getElementById("global-led");
+  if (gl) gl.className = `led led-lg led-${gst}`;
 
-  const sok = document.getElementById("sources-ok");
-  if (sok) sok.textContent = `${online}/${total} ok`;
+  const ok = STATE.sources.filter(s => s.ok).length;
+  const tot = STATE.sources.length;
+  const sokEl = document.getElementById("sources-ok");
+  if (sokEl) sokEl.textContent = `${ok}/${tot} OK`;
 
-  const st = STATE.status;
-  if (st) {
-    const up = st.uptime_s || 0;
-    const upStr = up < 3600 ? Math.round(up / 60) + "m" : Math.floor(up / 3600) + "h";
-    const ul = document.getElementById("uptime-lbl");
-    if (ul) { ul.textContent = "up " + upStr; ul.style.display = ""; }
-  }
+  const cdEl = document.getElementById("countdown");
+  if (cdEl) cdEl.textContent = `↻ ${STATE.next}s`;
+
+  const spEl = document.getElementById("tb-spie");
+  if (spEl) spEl.innerHTML = spie();
 }
 
-export function renderThreatBadge() {
-  const el = document.getElementById("threat-badge");
-  if (!el) return;
-  const t = threatScore();
-  el.innerHTML = `<span class="threat-badge thr-${t.lvl}">${esc(t.word)}</span>`;
-}
+/* ── Sidebar ─────────────────────────────────────────────────── */
+function _sidebar() {
+  const nav = document.getElementById("nav-list");
+  if (!nav) return;
+  const r = STATE.route;
+  const feedN  = sourcesByLayer(2).length;
+  const checkN = STATE.sources.filter(s => layerOf(s) === 1 && isConfigured(s)).length;
+  const errN   = STATE.sources.filter(s => s.enabled && !s.ok).length;
 
-export function renderRootmon() {
-  const el = document.getElementById("rootmon-dots");
-  if (!el) return;
-  const rows = val("rootmon", "rows");
-  if (!rows || !rows.length) { el.style.display = "none"; return; }
-  el.style.display = "flex";
-  let h = `<span class="rmon-lbl">DNS</span>`;
-  for (const r of rows) {
-    h += `<span class="rmon-dot ${statusClass(r.status)}" title="${esc(r.server + " · " + r.hostname)}"></span>`;
-  }
-  el.innerHTML = h;
-}
+  const links = [
+    { id: "overview",  label: "Essentials", glyph: "◈" },
+    { id: "check",     label: `Check${checkN ? ` (${checkN})` : ""}`, glyph: "◎" },
+    { id: "feeds",     label: `Info${feedN ? ` (${feedN})` : ""}`, glyph: "⊞" },
+    { id: "status",    label: `Status${errN ? ` ⚑${errN}` : ""}`, glyph: "⊙" },
+  ];
 
-export function renderCloudBar() {
-  const el = document.getElementById("cloud-bar");
-  if (!el) return;
-  const rows = val("cloud_status", "rows");
-  if (!rows || !rows.length) { el.style.display = "none"; return; }
-  el.style.display = "flex";
-  let h = `<span class="cbar-lbl">${img("/icons/cloud/icons8-cloud-50.png", "prov-icon")} Cloud</span>`;
-  for (const r of rows) {
-    const dc    = statusClass(r.status);
-    const cpCls = "cp-" + dc.slice(3);
-    const icon  = r.icon ? img(r.icon, "prov-icon") : "";
-    const inc   = r.incidents ? `<span class="cbar-inc">${r.incidents}⚠</span>` : "";
-    const tgt   = r.page
-      ? `href="${esc(r.page)}" target="_blank" rel="noopener"`
-      : `href="#" onclick="go('cloud_status');return false"`;
-    h += `<a ${tgt} class="cbar-pill ${cpCls}" title="${esc((r.detail || r.status || "").slice(0, 80))}">
-      <span class="dot ${dc}" style="width:5px;height:5px;flex-shrink:0"></span>
-      ${icon}<span class="cbar-name">${esc(r.provider)}</span>${inc}
-    </a>`;
-  }
-  el.innerHTML = h;
-}
-
-export function renderSidebar() {
-  const el = document.getElementById("nav-list");
-  if (!el) return;
-
-  let h = `<a class="nav-item${STATE.view === "overview" ? " active" : ""}" href="#" onclick="showOverview();return false">
-    <span class="nav-icon">▦</span>
-    <span class="nav-label">Overview</span>
-  </a>`;
-
-  for (const cat of CAT_ORDER) {
-    const sources = STATE.sources.filter(x => catOf(x) === cat);
-    if (!sources.length) continue;
-    h += `<div class="nav-group-label"><span class="nav-group-label-text">${esc(cat)}</span></div>`;
-    for (const s of sources) {
-      const active  = s.id === STATE.view ? " active" : "";
-      const age     = fmtAge((STATE.data[s.id] || {}).age_s);
-      const icon    = srcIcon(s) ? img(srcIcon(s), "nav-src-icon") : "";
-      const st      = panelStatus(s, (STATE.data[s.id] || {}).data);
-      const alert   = (st === "crit" || st === "err") ? `<span class="nav-alert">!</span>` : "";
-      h += `<a class="nav-item${active}" href="#" onclick="go(${jsq(s.id)});return false">
-        <span class="nav-dot ${dotCls(s)}"></span>
-        ${icon}
-        <span class="nav-label">${esc((s.schema && s.schema.title) || s.name)}</span>
-        <span class="nav-age">${esc(age)}</span>
-        ${alert}
+  const ver = STATE.status ? (STATE.status.version || "") : "";
+  nav.innerHTML =
+    `<div class="nav-brand">OmniCheck</div>` +
+    links.map(l => {
+      const act = r === l.id ? " nav-active" : "";
+      return `<a class="nav-link${act}" href="#/${esc(l.id)}"
+        onclick="event.preventDefault();window.navigate(${jsq(l.id)})">
+        <span class="nav-glyph">${l.glyph}</span>
+        <span class="nav-label">${esc(l.label)}</span>
       </a>`;
-    }
+    }).join("") +
+    `<div class="nav-spacer"></div>` +
+    (ver ? `<div class="nav-version">v${esc(ver)}</div>` : "");
+}
+
+/* ── Content router ─────────────────────────────────────────── */
+function _content() {
+  const el = document.getElementById("content");
+  if (!el) return;
+  const { route, routeParam } = STATE;
+  if      (route === "source" && routeParam) el.innerHTML = _sourcePage(routeParam);
+  else if (route === "check")                el.innerHTML = _checkPage();
+  else if (route === "feeds")                el.innerHTML = _feedsPage();
+  else if (route === "status")               el.innerHTML = _statusPage();
+  else                                       el.innerHTML = _overviewPage();
+}
+
+/* ── Essentials (L0, minus the header spie) ─────────────────── */
+function _overviewPage() {
+  // bgp/cloud/root live in the header now — show the rest of L0 here.
+  const l0 = sourcesByLayer(0).filter(s => !SPIE.includes(s.id));
+  const checkN = STATE.sources.filter(s => layerOf(s) === 1 && isConfigured(s)).length;
+  const feedN  = sourcesByLayer(2).length;
+
+  let html = `<div class="pg-hdr"><h1 class="pg-title">Essentials</h1>
+    <div class="pg-sub c-dim">Public-probe internet health · the spie above watch BGP, cloud and the DNS root</div></div>`;
+
+  if (l0.length) {
+    html += `<div class="mon-grid">${l0.map(monitorCard).join("")}</div>`;
+  } else {
+    html += `<div class="empty-note">All essentials are promoted to the header spie.</div>`;
   }
 
-  const appName = STATE.ui.app || "OmniCheck Cockpit";
-  h += `<div class="nav-bottom">
-    <a class="nav-item${STATE.view === "about" ? " active" : ""}" href="#" onclick="go('about');return false">
-      <span class="nav-icon" style="font-size:11px">ⓘ</span>
-      <span class="nav-label">Runtime Status</span>
-    </a>
+  html += `<div class="ov-shortcuts">
+    <button class="sc-btn" onclick="window.navigate('check')">
+      <span class="sc-glyph">◎</span>
+      <div><div class="sc-name">Check</div>
+      <div class="sc-sub">${checkN} configured API${checkN !== 1 ? "s" : ""} · assets</div></div>
+    </button>
+    <button class="sc-btn" onclick="window.navigate('feeds')">
+      <span class="sc-glyph">⊞</span>
+      <div><div class="sc-name">Info</div>
+      <div class="sc-sub">${feedN} feed source${feedN !== 1 ? "s" : ""}</div></div>
+    </button>
+    <button class="sc-btn" onclick="window.navigate('status')">
+      <span class="sc-glyph">⊙</span>
+      <div><div class="sc-name">Status</div>
+      <div class="sc-sub">engines &amp; config</div></div>
+    </button>
+  </div>`;
+  return html;
+}
+
+/* ── Check (L1): working APIs + correlated assets ───────────── */
+function _checkPage() {
+  const l1 = STATE.sources.filter(s => layerOf(s) === 1 && isConfigured(s));
+  let html = `<div class="pg-hdr"><h1 class="pg-title">Check</h1>
+    <div class="pg-sub c-dim">Configured intelligence APIs and the assets correlated from their results</div></div>`;
+
+  if (l1.length) {
+    html += `<div class="mon-grid">${l1.map(monitorCard).join("")}</div>`;
+  } else {
+    html += `<div class="empty-note">No API is configured yet — add credentials in <code>config.yaml</code>.</div>`;
+  }
+
+  // Correlated assets: the `assets` source carries the cross-engine intel view.
+  const assets = STATE.sources.find(s => s.id === "assets");
+  if (assets) {
+    const dd = STATE.data["assets"] || {};
+    html += `<div class="sect-title">Assets — correlated engine results</div>`;
+    html += intelWidget(dd.data || null, STATE.ui.readonly);
+  }
+  return html;
+}
+
+/* ── Substatus block: tools (L0) + how-it-works + config + log ── */
+function _subStatusHtml(id, layer) {
+  const det = STATE.detail[id];
+  if (!det) return `<div class="empty-note">Loading engine detail…</div>`;
+  let h = "";
+  if (layer === 0) h += toolRunner(id, det);
+  h += logicBlock(det);
+  h += configBlock(det);
+  h += eventsBlock(det);
+  return h;
+}
+
+/* ── Source detail ──────────────────────────────────────────── */
+function _sourcePage(id) {
+  const s = STATE.sources.find(s => s.id === id);
+  if (!s) return `<div class="empty-note">Unknown source: ${esc(id)}</div>`;
+
+  const st   = sourceStatus(s);
+  const sch  = s.schema || {};
+  const dd   = STATE.data[id] || {};
+  const data = dd.data || null;
+  const kind = kindOf(s).replace(/_/g, " ");
+  const layer = layerOf(s);
+
+  let html = `<div class="pg-hdr">
+    <button class="back-btn" onclick="history.back()">← back</button>
+    <h1 class="pg-title">${esc(s.name)}</h1>
+    <div class="pg-meta">
+      ${led(st, false)}
+      <span class="pill-${esc(st)}">${esc(st.toUpperCase())}</span>
+      <span class="kind-chip kb-${esc(kindOf(s))}">${esc(kind)}</span>
+      <span class="layer-chip">L${layer}</span>
+    </div>
   </div>`;
 
-  el.innerHTML = h;
-}
+  if (sch.description) html += `<p class="src-desc">${esc(sch.description)}</p>`;
 
-export function renderWorkspace() {
-  const ws      = document.getElementById("workspace");
-  const pageHdr = document.getElementById("page-hdr");
-  if (!ws) return;
+  html += `<div class="kv-grid">
+    <div class="kv-item"><div class="kv-v c-mono">${esc(s.last_fetch || "—")}</div><div class="kv-k">last fetch</div></div>
+    <div class="kv-item"><div class="kv-v">${esc(fmtAge(dd.age_s ?? s.age_s))}</div><div class="kv-k">data age</div></div>
+    <div class="kv-item"><div class="kv-v">${esc(fmtAge(s.interval))}</div><div class="kv-k">interval</div></div>
+    <div class="kv-item"><div class="kv-v">L${layer} ${esc(kind)}</div><div class="kv-k">layer / kind</div></div>
+  </div>`;
 
-  /* Runtime Status page */
-  if (STATE.view === "about") {
-    _showPageHdr(
-      `<span class="bc-link" onclick="showOverview()">OmniCheck</span><span class="bc-sep">/</span>Runtime Status`,
-      "Runtime Status",
-      ""
-    );
-    ws.innerHTML = `<div class="detail-wrap">${aboutHtml()}</div>`;
-    return;
+  const errTxt = dd.error || s.last_error || s.error || "";
+  if (errTxt) html += `<div class="errline">⚠ ${esc(errTxt)}</div>`;
+
+  if (!s.enabled) {
+    html += `<div class="locked-note">Source disabled — configure <code>sources.${esc(id)}</code> in config.yaml</div>`;
+    return html + _subStatusHtml(id, layer);
   }
 
-  /* Source detail page */
-  if (STATE.view !== "overview") {
-    const s = STATE.sources.find(x => x.id === STATE.view);
-    if (!s) {
-      if (pageHdr) pageHdr.style.display = "none";
-      ws.innerHTML = `<div class="empty">unknown source</div>`;
-      return;
+  if (!data) {
+    html += `<div class="empty-note">No data yet — source is fetching.</div>`;
+    return html + _subStatusHtml(id, layer);
+  }
+
+  // Summary cards
+  html += `<div class="sect-title">Summary</div>` + summaryCards(s, data);
+
+  // Widget or table(s)
+  if (sch.widget === "intel") {
+    html += `<div class="sect-title">Assets</div>` + intelWidget(data, STATE.ui.readonly);
+  } else if (sch.widget === "providerbar") {
+    html += `<div class="sect-title">Providers</div>` + providerBar(data);
+  } else if (sch.widget === "feeds") {
+    html += `<div class="sect-title">Latest</div>` + feedsWidget(id, data, 0);
+  } else if (sch.sections) {
+    for (const sec of sch.sections) {
+      html += `<div class="sect-title">${esc(sec.title)}</div>` + tableHtml(sec.table, data, null, null);
     }
-    const m   = META[s.id] || { cat: "OTHER", link: "" };
-    const ext = m.link ? `<a class="mast-btn" href="${esc(m.link)}" target="_blank" rel="noopener">↗ Console</a>` : "";
-    _showPageHdr(
-      `<span class="bc-link" onclick="showOverview()">OmniCheck</span>
-       <span class="bc-sep">/</span>${esc(catOf(s))}
-       <span class="bc-sep">/</span><span style="color:var(--sub)">${esc((s.schema && s.schema.title) || s.name)}</span>`,
-      (s.schema && s.schema.title) || s.name,
-      ext
-    );
-    const p = panelHtml(s, true);
-    ws.innerHTML = `<div class="detail-wrap"><div class="panel ${p.cls || ""}">${p.hdr}${p.body}</div></div>`;
-    ws.scrollTop = 0;
-    return;
+  } else if (sch.table) {
+    html += `<div class="sect-title">Data</div>` + tableHtml(sch.table, data, null, null);
   }
 
-  /* Overview */
-  if (pageHdr) pageHdr.style.display = "none";
+  // Substatus: tools (L0), how-it-works, config, last significant log
+  html += _subStatusHtml(id, layer);
 
-  let html = `<div class="ws-body">` + kpiStrip();
+  // Refresh button
+  if (!STATE.ui.readonly) {
+    html += `<div class="src-actions">
+      <button class="tb-btn" onclick="window.forceRefresh(${jsq(id)})">↻ Force Refresh</button>
+    </div>`;
+  }
 
-  for (const cat of CAT_ORDER) {
-    const sources = STATE.sources.filter(x => catOf(x) === cat && !GRID_HIDDEN.has(x.id));
-    if (!sources.length) continue;
-    html += `<div class="ws-cat-label">${esc(cat)}</div><div class="ws-grid">`;
-    for (const s of sources) {
-      const p = panelHtml(s, false);
-      html += `<div class="panel click ${p.cls || ""}" onclick="go(${jsq(s.id)})">${p.hdr}${p.body}</div>`;
+  // Raw JSON
+  html += `<details class="raw-details"><summary>Raw JSON</summary>
+    <pre class="raw-pre">${esc(JSON.stringify(dd, null, 2))}</pre>
+  </details>`;
+
+  return html;
+}
+
+/* ── Feed Center ────────────────────────────────────────────── */
+function _feedsPage() {
+  const feeds = sourcesByLayer(2);
+  let html = `<div class="pg-hdr"><h1 class="pg-title">Info</h1>
+    <div class="pg-sub c-dim">Feed sources · advisories, news and threat intel streams</div></div>`;
+
+  if (!feeds.length) {
+    return html + `<div class="empty-note">No Info-layer feed sources configured.</div>`;
+  }
+
+  html += `<div class="mon-grid">${feeds.map(monitorCard).join("")}</div>`;
+
+  for (const s of feeds) {
+    const dd   = STATE.data[s.id] || {};
+    const data = dd.data;
+    const sch  = s.schema || {};
+    if (!data) continue;
+
+    html += `<div class="sect-title">${esc(s.name)} — Latest</div>`;
+    if (sch.widget === "feeds") {
+      html += feedsWidget(s.id, data, 10);
+    } else if (sch.table) {
+      const rows = data[sch.table.rows_key] || [];
+      html += tableHtml(sch.table, { [sch.table.rows_key]: rows.slice(0, 15) }, null, null);
     }
-    html += `</div>`;
+  }
+  return html;
+}
+
+/* ── Status page ────────────────────────────────────────────── */
+function _statusPage() {
+  const st = STATE.status;
+  let html = `<div class="pg-hdr"><h1 class="pg-title">Status</h1></div>`;
+
+  if (st) {
+    const up = st.uptime_s || 0;
+    const upStr = up < 3600 ? `${Math.round(up/60)}m` : `${Math.floor(up/3600)}h ${Math.round((up%3600)/60)}m`;
+    html += `<div class="kv-grid">
+      <div class="kv-item"><div class="kv-v c-mono">${esc(st.version||"")}</div><div class="kv-k">version</div></div>
+      <div class="kv-item"><div class="kv-v">${esc(upStr)}</div><div class="kv-k">uptime</div></div>
+      <div class="kv-item"><div class="kv-v c-mono">${esc(st.python||"")}</div><div class="kv-k">python</div></div>
+      <div class="kv-item"><div class="kv-v">${esc(st.sources_ok||0)}/${esc(st.sources_total||0)}</div><div class="kv-k">sources OK</div></div>
+    </div>`;
+
+    if ((st.config_issues||[]).length) {
+      html += `<div class="sect-title">Configuration Issues</div>`;
+      html += (st.config_issues||[]).map(i =>
+        `<div class="errline">⚠ <b>${esc(i.source)}</b>: ${esc(i.detail)}</div>`
+      ).join("");
+    }
+    if ((st.runtime_errors||[]).length) {
+      html += `<div class="sect-title">Runtime Errors</div>`;
+      html += (st.runtime_errors||[]).map(i =>
+        `<div class="errline">✕ <b>${esc(i.source)}</b>: ${esc(i.detail)}</div>`
+      ).join("");
+    }
   }
 
-  html += `</div>`;
-  ws.innerHTML = html;
+  // Source table grouped by layer
+  for (const layer of [0, 1, 2]) {
+    const srcs = STATE.sources.filter(s => layerOf(s) === layer);
+    if (!srcs.length) continue;
+    html += `<div class="sect-title">L${layer} — ${esc(layerLabel(layer))}</div>
+      <table><thead><tr>
+        <th>Source</th><th>Kind</th><th>Status</th><th>Age</th><th>Interval</th><th>Error</th>
+      </tr></thead><tbody>${srcs.map(s => {
+        const st2 = sourceStatus(s);
+        const cls = !s.enabled ? "row-off" : !s.ok ? "row-err" : "";
+        return `<tr class="${cls}">
+          <td><a href="#/source/${esc(s.id)}" onclick="window.navigate(${jsq('source/'+s.id)});event.preventDefault()">${esc(s.name)}</a></td>
+          <td class="c-dim">${esc(kindOf(s).replace(/_/g," "))}</td>
+          <td>${led(st2,false)} <span class="pill-${esc(st2)}">${esc(st2)}</span></td>
+          <td class="c-mono c-dim">${esc(fmtAge((STATE.data[s.id]||{}).age_s ?? s.age_s))}</td>
+          <td class="c-mono c-dim">${esc(fmtAge(s.interval))}</td>
+          <td class="c-dim c-trunc">${esc(s.last_error||s.error||"")}</td>
+        </tr>`;
+      }).join("")}</tbody></table>`;
+  }
+
+  html += _creditsHtml();
+  return html;
 }
 
-export function renderFooter() {
-  const el = document.getElementById("status-footer");
-  if (!el) return;
-
-  const online   = STATE.sources.filter(s => s.ok).length;
-  const total    = STATE.sources.length;
-  const degraded = STATE.sources.filter(s => s.enabled && !s.ok).map(s => (s.schema && s.schema.title) || s.name);
-  const off      = STATE.sources.filter(s => !s.enabled).length;
-  const crit     = [];
-
-  const bgpCrit = val("bgp", "critical");
-  if (bgpCrit && bgpCrit.length) crit.push(`${bgpCrit.length} BGP critical`);
-  const cloudDeg = val("cloud_status", "degraded");
-  if (cloudDeg) crit.push(`${cloudDeg} cloud degraded`);
-  const rFail = val("rootmon", "fail");
-  if (rFail) crit.push(`${rFail} root DNS failing`);
-  const atRisk = val("assets", "at_risk");
-  if (atRisk) crit.push(`${atRisk} assets at risk`);
-
-  el.innerHTML =
-    `<span class="foot-label">Status</span>`
-    + `<span class="foot-item"><b>${online}/${total}</b> online</span>`
-    + `<span class="foot-item">${degraded.length} degraded${degraded.length ? ": " + esc(degraded.join(", ")) : ""}</span>`
-    + `<span class="foot-item">${off} off</span>`
-    + (crit.length
-      ? `<span class="foot-item" style="color:var(--magenta)">⚠ ${esc(crit.join(" · "))}</span>`
-      : `<span class="foot-item" style="color:var(--green)">no critical signals</span>`);
-}
-
-function _showPageHdr(breadcrumbHtml, title, actionsHtml) {
-  const hdr = document.getElementById("page-hdr");
-  if (!hdr) return;
-  hdr.style.display = "";
-  document.getElementById("page-breadcrumb").innerHTML = breadcrumbHtml;
-  document.getElementById("page-title").textContent = title;
-  document.getElementById("page-actions").innerHTML = actionsHtml;
+/* ── Credits: a tip of the hat to the hackers and the machine ── */
+function _creditsHtml() {
+  return `<div class="sect-title">Credits</div>
+  <div class="credits">
+    <p class="cr-lead">Built in the solo-hacker spirit — simplicity over completeness,
+      deep understanding over surface coverage.</p>
+    <p>In tribute to <strong>Salvatore Sanfilippo (antirez)</strong>, whose Redis,
+      linenoise and writings are the north star of this codebase: small, sharp,
+      legible tools you can hold whole in your head. With a nod to the other
+      tinkerers who build great things alone — Karpathy, Thompson, Gerganov.</p>
+    <p class="cr-ai c-dim">Crafted in pair-programming with an AI assistant
+      (Claude), under a human hand that owns every line. The machine drafts;
+      the hacker decides.</p>
+    <p class="cr-foot c-dim">Icons by icons8 · public data via RIPEstat, IANA,
+      crt.sh and provider status pages.</p>
+  </div>`;
 }

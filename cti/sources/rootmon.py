@@ -304,4 +304,12 @@ def schema() -> dict:
                 {"key": "status",    "label": "Status",        "badge": True},
             ],
         },
+        "tools": [
+            {"tool": "dig", "label": "dig root NS", "arg": "a.root-servers.net", "extra": "NS"},
+            {"tool": "dig", "label": "dig . SOA", "arg": ".", "extra": "SOA"},
+            {"tool": "tcp", "label": "tcp 53", "arg": "198.41.0.4", "extra": "53"},
+        ],
+        "layer": 0,
+        "kind": "internet_health",
+        "overview": True,
     }

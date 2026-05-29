@@ -99,4 +99,7 @@ def schema() -> dict:
                 {"key": "hits",    "label": "Sources",  "numeric": True},
             ],
         },
+        "layer": 0,
+        "kind": "correlation",
+        "overview": True,
     }

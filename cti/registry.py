@@ -11,6 +11,9 @@ A source is any module in cti.sources exposing the contract:
 
 Optional:
   REQUIRES:  list[str]   config keys that must be truthy or the source is skipped
+  LAYER:     int         0=internet_health  1=configured_api  2=feeds
+  KIND:      str         "internet_health" | "configured_api" | "correlation" | "feed"
+  OVERVIEW:  bool        whether to show on the Overview page (default True)
 """
 from __future__ import annotations
 
@@ -37,6 +40,9 @@ class SourceState:
     age_s: Optional[float] = None
     ok: bool = False
     requires: list[str] = field(default_factory=list)
+    layer: int = 0
+    kind: str = "internet_health"
+    overview: bool = True
 
     def health(self) -> dict:
         return {
@@ -49,6 +55,9 @@ class SourceState:
             "error": self.last_error,
             "interval": self.interval,
             "requires": self.requires,
+            "layer": self.layer,
+            "kind": self.kind,
+            "overview": self.overview,
         }
 
 
@@ -62,12 +71,28 @@ def discover() -> dict[str, SourceState]:
         sid = getattr(mod, "ID", None)
         if not sid:
             continue
+
+        # layer/kind/overview: schema() first, then module constants, then defaults
+        layer = getattr(mod, "LAYER", 0)
+        kind = getattr(mod, "KIND", "internet_health")
+        overview = getattr(mod, "OVERVIEW", True)
+        try:
+            sch = mod.schema()
+            layer = sch.get("layer", layer)
+            kind = sch.get("kind", kind)
+            overview = sch.get("overview", overview)
+        except Exception:
+            pass
+
         states[sid] = SourceState(
             module=mod,
             id=sid,
             name=getattr(mod, "NAME", sid),
             interval=int(getattr(mod, "INTERVAL", 600)),
             requires=list(getattr(mod, "REQUIRES", [])),
+            layer=layer,
+            kind=kind,
+            overview=overview,
         )
-        log.info("registered source: %s (%s)", sid, states[sid].name)
+        log.info("registered source: %s (%s) layer=%d kind=%s", sid, states[sid].name, layer, kind)
     return states

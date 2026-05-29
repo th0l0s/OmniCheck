@@ -175,4 +175,7 @@ def schema() -> dict:
                 {"key": "iocs",         "label": "IOCs",   "numeric": True},
             ],
         },
+        "layer": 2,
+        "kind": "feed",
+        "overview": False,
     }

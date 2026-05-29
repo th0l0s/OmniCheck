@@ -346,4 +346,9 @@ def schema() -> dict:
                 {"key": "latency_ms", "label": "ms"},
             ],
         },
+        "tools": [
+            {"tool": "dig", "label": "dig NS", "arg": "example.com", "extra": "NS"},
+            {"tool": "dig", "label": "dig SOA", "arg": "example.com", "extra": "SOA"},
+            {"tool": "whois", "label": "whois domain", "arg": "example.com"},
+        ],
     }

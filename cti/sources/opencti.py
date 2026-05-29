@@ -86,4 +86,7 @@ def schema() -> dict:
                 {"key": "count", "label": "Count"},
             ],
         },
+        "layer": 1,
+        "kind": "configured_api",
+        "overview": True,
     }

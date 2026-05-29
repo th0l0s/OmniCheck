@@ -79,3 +79,38 @@ def append_event(event: dict) -> None:
             f.write(json.dumps(event, default=str) + "\n")
     except Exception as exc:
         log.warning("append_event failed: %s", exc)
+
+
+def tail_events(source_id: str | None = None, limit: int = 20) -> list[dict]:
+    """Last `limit` events, newest first. Filtered to one source when given.
+
+    Reads only the tail of the JSONL file so a long audit log stays cheap to
+    serve. Lines that don't match the source are skipped after parsing."""
+    if not _EVENTS.exists():
+        return []
+    try:
+        # read a bounded tail of the file (events are short lines)
+        with _EVENTS.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            window = min(size, 256 * 1024)
+            f.seek(size - window)
+            chunk = f.read().decode("utf-8", errors="replace")
+        out: list[dict] = []
+        for line in reversed(chunk.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            if source_id and ev.get("source") != source_id:
+                continue
+            out.append(ev)
+            if len(out) >= limit:
+                break
+        return out
+    except Exception as exc:
+        log.warning("tail_events failed: %s", exc)
+        return []

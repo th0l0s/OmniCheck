@@ -124,4 +124,7 @@ def schema() -> dict:
         "category": "feed",
         "widget": "feeds",
         "summary_keys": ["total"],
+        "layer": 2,
+        "kind": "feed",
+        "overview": False,
     }

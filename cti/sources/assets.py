@@ -161,4 +161,7 @@ def schema() -> dict:
         "category": "meta",
         "widget": "intel",
         "summary_keys": ["assets_total", "at_risk"],
+        "layer": 1,
+        "kind": "correlation",
+        "overview": True,
     }

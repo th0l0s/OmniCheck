@@ -1,36 +1,35 @@
-/* state.js — shared runtime state and constants. No side effects. */
+/* state.js — shared runtime state. No side effects on import. */
 
 export const STATE = {
   sources: [],
   data: {},
   status: null,
   ui: { app: "OmniCheck Cockpit", poll_interval_s: 15, readonly: true },
-  view: "overview",
+  route: "overview",
+  routeParam: null,
   next: 15,
   refreshMs: 15000,
-  domainFilters: {},
-  feedFilters: {},
+  detail: {},        // id -> {logic, config, events, tools}
+  tools: [],         // available diagnostic tool descriptors
+  toolOut: {},       // "id:idx" -> last tool run result
 };
 
-/* hardcoded metadata for sources not exposing a category in schema() */
-export const META = {
-  atera:        { cat: "API",    link: "https://app.atera.com" },
-  shodan:       { cat: "API",    link: "https://account.shodan.io" },
-  netlas:       { cat: "API",    link: "https://app.netlas.io" },
-  bgp:          { cat: "API",    link: "https://stat.ripe.net" },
-  rootmon:      { cat: "PROBE",  link: "https://root-servers.org" },
-  news_feed:    { cat: "FEED",   link: "" },
-  acn_misp:     { cat: "FEED",   link: "https://www.csirt.gov.it" },
-  cloud_status: { cat: "STATUS", link: "" },
-  correlation:  { cat: "META",   link: "" },
-  opencti:      { cat: "META",   link: "" },
-  assets:       { cat: "META",   link: "" },
-};
+/* The three L0 essentials promoted to header control-lights ("spie"). */
+export const SPIE = ["bgp", "cloud_status", "rootmon"];
 
-export const CAT_ORDER = ["API", "FEED", "STATUS", "PROBE", "META"];
+/* ── Timeline: last 20 status checks per source (localStorage) ── */
+const _TL_KEY = "omni_tl_v1";
 
-/* sources shown only in their dedicated sidebar tabs, not in overview grid */
-export const GRID_HIDDEN = new Set([
-  "shodan", "netlas", "correlation", "thc_rdns",
-  "acn_misp", "news_feed", "cloud_status", "rootmon",
-]);
+export function tlGet() {
+  try { return JSON.parse(localStorage.getItem(_TL_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+export function tlPush(id, status) {
+  const tl = tlGet();
+  const arr = tl[id] || [];
+  arr.push(status);
+  if (arr.length > 20) arr.splice(0, arr.length - 20);
+  tl[id] = arr;
+  try { localStorage.setItem(_TL_KEY, JSON.stringify(tl)); } catch {}
+}

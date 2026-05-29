@@ -230,4 +230,12 @@ def schema() -> dict:
                 {"key": "prefixes",   "label": "Prefixes", "numeric": True},
             ],
         },
+        "tools": [
+            {"tool": "whois", "label": "whois ASN", "arg": "AS3269"},
+            {"tool": "whois", "label": "whois prefix", "arg": "2.36.0.0/16"},
+            {"tool": "dig", "label": "dig origin", "arg": "1.0.0.0.asn.routeviews.org", "extra": "TXT"},
+        ],
+        "layer": 0,
+        "kind": "internet_health",
+        "overview": True,
     }

@@ -185,4 +185,7 @@ def schema() -> dict:
         "category": "status",
         "widget": "providerbar",
         "summary_keys": ["providers_total", "operational", "degraded"],
+        "layer": 0,
+        "kind": "internet_health",
+        "overview": True,
     }

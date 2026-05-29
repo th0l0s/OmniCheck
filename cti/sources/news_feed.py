@@ -201,4 +201,7 @@ def schema() -> dict:
                 {"key": "title", "label": "Title", "link_key": "link"},
             ],
         },
+        "layer": 2,
+        "kind": "feed",
+        "overview": False,
     }

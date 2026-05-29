@@ -11,54 +11,34 @@
 <link rel="stylesheet" href="/static/css/badges.css">
 </head>
 <body>
-  <div class="scan-line"></div>
-
-  <header class="masthead">
-    <a class="brand" href="#" id="brand-link" title="OmniCheck Cockpit — overview">
-      <div class="brand-icon">
-        <img src="/icons/logo/icons8-decentralized-network-48.png" alt="OmniCheck">
+  <header id="topbar">
+    <div class="tb-brand">
+      <img class="tb-logo" src="/icons/logo/icons8-decentralized-network-48.png" alt="">
+      <div>
+        <div class="tb-name">OmniCheck <em>Cockpit</em></div>
+        <div class="tb-sub">CTI &amp; infrastructure sentinel</div>
       </div>
-      <div class="brand-text">Omni<em>Check</em></div>
-    </a>
-    <div class="mast-center">
-      <span id="threat-badge" role="button" tabindex="0" aria-live="polite"
-            title="global threat level — click to inspect"></span>
-      <span id="sources-ok" class="mast-info"></span>
-      <span id="uptime-lbl" class="mast-info" style="display:none"></span>
     </div>
-    <div class="mast-right">
-      <div id="rootmon-dots" class="rmon-cluster" aria-label="root DNS health"></div>
-      <span class="ts-txt" id="ts-lbl">—</span>
-      <span class="cd-txt">↻ <b id="countdown">—</b></span>
-      <button class="mast-btn" id="refresh-btn" aria-label="sync all sources now">↻ SYNC</button>
+    <div class="tb-center">
+      <span id="global-led" class="led led-lg led-off" title="Global status"></span>
+      <span id="sources-ok" class="tb-stat">—</span>
+      <div id="tb-spie" class="tb-spie" aria-label="Essentials control lights"></div>
+    </div>
+    <div class="tb-right">
+      <span id="ts-lbl" class="tb-ts">—</span>
+      <span id="countdown" class="tb-cd">—</span>
+      <button id="refresh-btn" class="tb-btn" aria-label="Sync all sources">↻ SYNC</button>
     </div>
   </header>
 
-  <div id="cloud-bar" class="cloud-bar" aria-label="Cloud provider status"></div>
-
   <div class="app-body">
-    <nav id="sidebar" aria-label="Source navigation">
-      <div id="nav-list"></div>
-    </nav>
-
-    <div class="page-area">
-      <div id="page-hdr" class="page-hdr" style="display:none">
-        <div class="page-breadcrumb" id="page-breadcrumb"></div>
-        <div class="page-title-row">
-          <h1 class="page-title" id="page-title"></h1>
-          <div class="page-actions" id="page-actions"></div>
-        </div>
-      </div>
-      <main class="page-content" id="workspace" role="main">
-        <div class="state-msg"><strong>Initializing…</strong>Connecting to sources.</div>
-      </main>
-    </div>
+    <aside id="sidebar" aria-label="Navigation">
+      <nav id="nav-list"></nav>
+    </aside>
+    <main id="content" role="main">
+      <div class="init-msg">Initializing…</div>
+    </main>
   </div>
-
-  <footer class="status-footer" id="status-footer" aria-live="polite">
-    <span class="foot-label">Status</span>
-    <span class="foot-item">connecting…</span>
-  </footer>
 
   <script type="module" src="/static/js/app.js"></script>
 </body>
