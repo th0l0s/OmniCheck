@@ -13,6 +13,7 @@ no new HTML. That is the whole point of Plan B.
 from __future__ import annotations
 
 import logging
+import os
 import platform
 import sys
 import time
@@ -100,6 +101,16 @@ async def api_sources():
     return {"version": __version__, "count": len(out), "sources": out}
 
 
+@app.get("/api/ui")
+async def api_ui():
+    """Frontend config: app name, poll interval, readonly mode (no CTI_API_KEY set)."""
+    return {
+        "app": "OmniCheck Cockpit",
+        "poll_interval_s": int(CFG.get("poll_interval", 15)),
+        "readonly": not bool(os.getenv("CTI_API_KEY", "")),
+    }
+
+
 @app.get("/api/health")
 async def api_health():
     sources = [s.health() for s in STATES.values()]
@@ -180,7 +191,7 @@ async def api_targets_get():
 
 
 @app.post("/api/targets")
-async def api_targets_post(payload: _TargetsIn):
+async def api_targets_post(payload: _TargetsIn, _: None = Depends(require_api_key)):
     """Add or remove IPs/domains from assets.yaml. No API key required."""
     from . import targets as tgt
     try:

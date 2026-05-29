@@ -180,6 +180,7 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Cloud Status",
+        "description": "Operational status of European cloud providers (AWS, Azure, GCP, Hetzner, OVH…)",
         "icon": "/icons/cloud/icons8-cloud-50.png",
         "category": "status",
         "widget": "providerbar",

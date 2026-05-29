@@ -86,16 +86,17 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "IOC Correlation",
+        "description": "Cross-source IOC overlap: indicators appearing in ACN/MISP, Shodan, and Netlas",
         "icon": "/icons/security/icons8-fingerprint-50.png",
         "category": "meta",
         "summary_keys": ["correlated_iocs", "max_overlap"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "ioc", "label": "IOC"},
-                {"key": "type", "label": "Type", "badge": True},
+                {"key": "ioc",     "label": "IOC",      "mono": True},
+                {"key": "type",    "label": "Type",     "badge": True},
                 {"key": "sources", "label": "Seen in"},
-                {"key": "hits", "label": "Sources"},
+                {"key": "hits",    "label": "Sources",  "numeric": True},
             ],
         },
     }

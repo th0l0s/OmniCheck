@@ -10,12 +10,22 @@ def test_at_least_the_core_sources_registered():
             "assets", "correlation", "news_feed", "acn_misp"} <= ids
 
 
+_WIDGET_SOURCES = {"intel", "providerbar", "feeds"}
+
+
 def test_every_source_schema_is_valid():
     for sid, st in STATES.items():
         sch = st.module.schema()
         assert isinstance(sch, dict), sid
         assert sch.get("title"), f"{sid} schema missing title"
-        # must describe rows either via a single table or sections
+
+        widget = sch.get("widget")
+        if widget in _WIDGET_SOURCES:
+            # widget-based sources render through dedicated JS renderers,
+            # not via the generic table builder — no table/sections required
+            continue
+
+        # non-widget sources must describe rows via table or sections
         has_table = "table" in sch
         has_sections = "sections" in sch
         assert has_table or has_sections, f"{sid} schema has no table/sections"

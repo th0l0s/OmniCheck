@@ -161,17 +161,18 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "ACN / CSIRT-IT",
+        "description": "Italian CSIRT MISP threat intelligence events and ACN portal RSS advisories",
         "icon": "/icons/security/icons8-cyber-security-50.png",
         "category": "feed",
         "summary_keys": ["misp_total", "ioc_total", "rss_total"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "info", "label": "Event"},
-                {"key": "threat_level", "label": "Level", "badge": True, "icon_key": "level_icon"},
-                {"key": "org", "label": "Org"},
-                {"key": "date", "label": "Date"},
-                {"key": "iocs", "label": "IOCs"},
+                {"key": "info",         "label": "Event"},
+                {"key": "threat_level", "label": "Level",  "badge": True, "icon_key": "level_icon"},
+                {"key": "org",          "label": "Org"},
+                {"key": "date",         "label": "Date",   "mono": True},
+                {"key": "iocs",         "label": "IOCs",   "numeric": True},
             ],
         },
     }

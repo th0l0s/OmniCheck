@@ -21,4 +21,4 @@ state/
 tests/__pycache__/    
 int/
 .claude
-  
+  git push origin new_main:main

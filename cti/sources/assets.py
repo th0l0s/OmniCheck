@@ -156,6 +156,7 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Assets",
+        "description": "Per-asset risk view aggregating Shodan and Netlas intel for monitored IPs and domains",
         "icon": ICON,
         "category": "meta",
         "widget": "intel",

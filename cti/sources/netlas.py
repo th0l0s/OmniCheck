@@ -120,17 +120,18 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Netlas Intel",
+        "description": "Host and domain exposure intelligence for monitored assets via Netlas API",
         "icon": "/icons/security/icons8-web-shield-50.png",
         "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "target", "label": "Target"},
-                {"key": "risk_level", "label": "Risk", "badge": True},
-                {"key": "risk_score", "label": "Score"},
-                {"key": "open_ports", "label": "Ports"},
-                {"key": "vuln_count", "label": "Vulns"},
+                {"key": "target",     "label": "Target",  "mono": True},
+                {"key": "risk_level", "label": "Risk",    "badge": True},
+                {"key": "risk_score", "label": "Score",   "numeric": True},
+                {"key": "open_ports", "label": "Ports",   "numeric": True},
+                {"key": "vuln_count", "label": "Vulns",   "numeric": True},
             ],
         },
     }

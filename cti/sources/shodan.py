@@ -125,18 +125,19 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Shodan Intel",
+        "description": "IP threat intelligence and risk scoring for monitored hosts via Shodan API",
         "icon": "/icons/security/icons8-nmap-50.png",
         "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "ip", "label": "IP"},
-                {"key": "risk_level", "label": "Risk", "badge": True},
-                {"key": "risk_score", "label": "Score"},
-                {"key": "open_ports", "label": "Ports"},
-                {"key": "vuln_count", "label": "Vulns"},
-                {"key": "country", "label": "Country"},
+                {"key": "ip",         "label": "IP",      "mono": True},
+                {"key": "risk_level", "label": "Risk",    "badge": True},
+                {"key": "risk_score", "label": "Score",   "numeric": True},
+                {"key": "open_ports", "label": "Ports",   "numeric": True},
+                {"key": "vuln_count", "label": "Vulns",   "numeric": True},
+                {"key": "country",    "label": "Country"},
             ],
         },
     }

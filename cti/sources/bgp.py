@@ -215,18 +215,19 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "BGP Watch IT",
+        "description": "RPKI, IRR and global visibility checks for Italian ISP ASNs via RIPEstat",
         "icon": "/icons/network/icons8-internet-50.png",
         "category": "api",
         "summary_keys": ["targets_checked", "prefixes_checked"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "target", "label": "Operator"},
-                {"key": "asn", "label": "ASN"},
-                {"key": "group", "label": "Group"},
-                {"key": "severity", "label": "Severity", "badge": True},
-                {"key": "risk_score", "label": "Risk"},
-                {"key": "prefixes", "label": "Prefixes"},
+                {"key": "target",     "label": "Operator"},
+                {"key": "asn",        "label": "ASN",      "mono": True},
+                {"key": "group",      "label": "Group"},
+                {"key": "severity",   "label": "Severity", "badge": True},
+                {"key": "risk_score", "label": "Risk",     "numeric": True},
+                {"key": "prefixes",   "label": "Prefixes", "numeric": True},
             ],
         },
     }

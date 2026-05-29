@@ -288,19 +288,20 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Root DNS Monitor",
+        "description": "UDP SOA + TCP liveness probes against all 13 DNS root server letters (A–M)",
         "icon": "/icons/network/icons8-dns-50.png",
         "category": "probe",
         "summary_keys": ["total_checks", "ok", "fail", "avg_udp_latency_ms", "common_serial"],
         "table": {
             "rows_key": "rows",
             "columns": [
-                {"key": "server", "label": "Root"},
-                {"key": "hostname", "label": "Hostname"},
-                {"key": "ipv4", "label": "IPv4"},
-                {"key": "serial", "label": "Serial"},
-                {"key": "nsid", "label": "NSID (anycast)"},
+                {"key": "server",    "label": "Root"},
+                {"key": "hostname",  "label": "Hostname",      "mono": True},
+                {"key": "ipv4",      "label": "IPv4",          "mono": True},
+                {"key": "serial",    "label": "Serial",        "mono": True},
+                {"key": "nsid",      "label": "NSID (anycast)","mono": True},
                 {"key": "checks_ok", "label": "Checks OK"},
-                {"key": "status", "label": "Status", "badge": True},
+                {"key": "status",    "label": "Status",        "badge": True},
             ],
         },
     }

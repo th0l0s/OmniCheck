@@ -85,6 +85,7 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Atera RMM",
+        "description": "RMM alerts, open tickets, and offline servers from the Atera platform",
         "icon": ICON,
         "category": "api",
         "summary_keys": ["tickets_open", "tickets_triage", "alerts_total", "servers_offline"],
