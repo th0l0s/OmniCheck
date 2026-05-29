@@ -238,14 +238,8 @@
   transition: border-color .12s, color .12s, background .12s;
 }
 .spia:hover { color: var(--fg); background: var(--border); }
-.spia-icon { width: 16px; height: 16px; opacity: .9; }
-.spia-lbl {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: .03em;
-  white-space: nowrap;
-}
+/* Icon-only spie: slightly larger glyph, no text label. */
+.spia-icon { width: 22px; height: 22px; opacity: .95; }
 .spia-ok           { border-left-color: var(--c-ok); }
 .spia-warning      { border-left-color: var(--c-warn); }
 .spia-critical     { border-left-color: var(--c-crit); }
@@ -253,8 +247,6 @@
 .spia-stale        { border-left-color: var(--c-stale); opacity: .85; }
 .spia-off          { border-left-color: var(--c-off); opacity: .6; }
 .spia-config       { border-left-color: var(--c-info); }
-
-@media (max-width: 760px) { .spia-lbl { display: none; } }
 
 /* ══ Page subtitle ═══════════════════════════════════════════ */
 .pg-sub { font-size: 0.76rem; margin-top: 2px; }
@@ -289,7 +281,10 @@
 .asset-rm:hover { color: var(--c-err); border-color: var(--c-err); }
 
 /* brand is now a link to the Check dashboard */
-.tb-brand { text-decoration: none; color: inherit; cursor: pointer; }
+.tb-brand,
+.tb-brand:hover,
+.tb-brand * { text-decoration: none !important; }
+.tb-brand { color: inherit; cursor: pointer; }
 .tb-brand:hover .tb-name { color: var(--c-accent); }
 
 /* ══ Substatus: logic / config / log ═════════════════════════ */
@@ -307,6 +302,7 @@
   margin-bottom: var(--s3);
 }
 .logic-pre { color: var(--fg-mid); }
+.logic-it  { border-left: 3px solid var(--c-accent); }
 .cfg-pre   { color: var(--c-accent); }
 
 .lg-box {

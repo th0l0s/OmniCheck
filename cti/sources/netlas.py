@@ -121,6 +121,14 @@ def schema() -> dict:
     return {
         "title": "Netlas Intel",
         "description": "Host and domain exposure intelligence for monitored assets via Netlas API",
+        "help_it": (
+            "Funzione: misura l'esposizione di host e domini monitorati tramite l'API "
+            "di Netlas (porte, servizi, certificati, vulnerabilità). Copre sia IP sia "
+            "domini (query `host:`).\n\n"
+            "Configurazione: `sources.netlas.api_key` (Netlas → API key). I target "
+            "derivano da assets.yaml (liste `ips:`/`domains:`) o da "
+            "`sources.netlas.targets`. Intervallo: 24h."
+        ),
         "icon": "/icons/security/icons8-web-shield-50.png",
         "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],

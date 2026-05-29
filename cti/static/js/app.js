@@ -86,6 +86,23 @@ window.runTool = async function(sid, idx, tool) {
 };
 
 /* ── Target management ──────────────────────────────────────── */
+// Live type hint mirroring backend targets.classify(): valid IP → "IP",
+// otherwise a dotted name → "domain".
+const _IPV4 = /^(\d{1,3}\.){3}\d{1,3}$/;
+window.hintTarget = function(v) {
+  const el = document.getElementById("tgt-kind");
+  if (!el) return;
+  v = (v || "").trim();
+  let kind = "";
+  if (!v) kind = "";
+  else if (_IPV4.test(v) && v.split(".").every(o => +o >= 0 && +o <= 255)) kind = "IP";
+  else if (v.includes(":") && v.split(":").length > 2) kind = "IPv6";
+  else if (v.includes(".")) kind = "domain";
+  else kind = "?";
+  el.textContent = kind ? `→ ${kind}` : "";
+  el.className = "asset-kind " + (kind === "?" ? "c-warn" : "c-ok");
+};
+
 window.addTarget = async function() {
   const inp = document.getElementById("tgt-new");
   if (!inp || !inp.value.trim()) return;

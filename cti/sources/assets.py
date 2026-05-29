@@ -157,6 +157,15 @@ def schema() -> dict:
     return {
         "title": "Assets",
         "description": "Per-asset risk view aggregating Shodan and Netlas intel for monitored IPs and domains",
+        "help_it": (
+            "Funzione: vista per-asset che fonde l'intelligence di Shodan e Netlas "
+            "sugli IP/domini monitorati ed evidenzia il rischio peggiore per ciascuno. "
+            "È una meta-sorgente: non interroga l'esterno, legge la cache delle altre "
+            "sorgenti.\n\n"
+            "Configurazione: nessuna chiave. La lista asset si gestisce dalla GUI "
+            "(Check → Assets, aggiunta/rimozione di IP e domini) oppure nel file "
+            "assets.yaml (liste `ips:` e `domains:`)."
+        ),
         "icon": ICON,
         "category": "meta",
         "widget": "intel",

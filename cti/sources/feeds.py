@@ -120,6 +120,15 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "Intel Feeds",
+        "help_it": (
+            "Funzione: pannello unificato che fonde i risultati già raccolti da "
+            "News Feed e ACN/CSIRT-IT in un'unica timeline (più recenti in alto). "
+            "Ogni voce porta i campi type/category/source che alimentano i filtri "
+            "della dashboard. È una meta-sorgente: non scarica nulla dall'esterno.\n\n"
+            "Configurazione: nessuna. Per cambiare le fonti si configurano le "
+            "sorgenti a monte (`sources.news_feed`, `sources.acn_misp`). "
+            "Intervallo: 5 min."
+        ),
         "icon": "/icons/network/icons8-rss-50.png",
         "category": "feed",
         "widget": "feeds",

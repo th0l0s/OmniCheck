@@ -162,6 +162,14 @@ def schema() -> dict:
     return {
         "title": "ACN / CSIRT-IT",
         "description": "Italian CSIRT MISP threat intelligence events and ACN portal RSS advisories",
+        "help_it": (
+            "Funzione: raccoglie gli eventi MISP del CSIRT-IT italiano e gli avvisi "
+            "RSS del portale ACN, normalizzandoli in IOC e advisory. Alimenta la "
+            "correlazione cross-source del layer Advanced.\n\n"
+            "Configurazione: funziona con gli endpoint pubblici predefiniti. Override "
+            "opzionali in config.yaml: `sources.acn_misp.feed_url` e "
+            "`sources.acn_misp.rss_url`. Intervallo: 15 min."
+        ),
         "icon": "/icons/security/icons8-cyber-security-50.png",
         "category": "feed",
         "summary_keys": ["misp_total", "ioc_total", "rss_total"],

@@ -189,6 +189,12 @@ def parse(raw: dict) -> dict:
 def schema() -> dict:
     return {
         "title": "News Feed",
+        "help_it": (
+            "Funzione: stream di notizie di sicurezza/IT raccolte da sorgenti RSS "
+            "elencate in file OPML, ordinate per data e categorizzate.\n\n"
+            "Configurazione: `sources.news_feed.opml_urls` in config.yaml (lista di "
+            "URL OPML). In assenza usa l'OPML predefinito. Intervallo: 30 min."
+        ),
         "icon": "/icons/network/icons8-rss-50.png",
         "category": "feed",
         "summary_keys": ["sources_loaded", "total_items"],

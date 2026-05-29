@@ -186,10 +186,25 @@ export function filterChips(sid, rows, key, activeVal) {
   return `<div class="filter-row">${all}${chips.join("")}</div>`;
 }
 
+/* ── Asset add form: one input, IP *or* domain, live type hint ── */
+function _assetAddForm() {
+  // Live detection mirrors backend targets.classify(): a valid IPv4/IPv6 → ip,
+  // anything else with a dot → domain.
+  return `<div class="asset-add">
+    <div class="asset-add-row">
+      <input id="tgt-new" type="text" placeholder="IP (es. 8.8.8.8) o dominio (es. example.com)…"
+        class="tgt-input" oninput="window.hintTarget(this.value)"
+        onkeydown="if(event.key==='Enter')window.addTarget()">
+      <span id="tgt-kind" class="asset-kind c-dim"></span>
+      <button class="tb-btn" onclick="window.addTarget()">+ Add</button>
+    </div>
+    <div class="asset-add-note c-dim">Si registrano sia IP sia domini: il tipo è rilevato automaticamente.</div>
+  </div>`;
+}
+
 /* ── Intel widget (assets cross-source view) ────────────────── */
 export function intelWidget(data, readonly) {
   const rows = (data && data.rows) || [];
-  if (!rows.length) return `<div class="empty-note">No assets yet. Add IPs/domains via <code>assets.yaml</code>.</div>`;
 
   function _risk(risk, ports, vulns) {
     if (!risk || risk === "—") return `<span class="muted">—</span>`;
@@ -197,35 +212,34 @@ export function intelWidget(data, readonly) {
     return `${badge(risk)}<span class="c-dim" style="font-size:10px;margin-left:4px">${esc(meta)}</span>`;
   }
 
-  let h = `<table><thead><tr>
-    <th>Asset</th><th>DNS</th><th>Country/Org</th><th>Shodan</th><th>Netlas</th><th>Worst</th>
-    ${readonly ? "" : "<th></th>"}
-  </tr></thead><tbody>`;
-  for (const r of rows) {
-    const risk = String(r.max_risk || "").toLowerCase();
-    const rc = (risk === "critical" || risk === "high") ? "r-crit" : risk === "medium" ? "r-high" : "";
-    const geo = [r.country, r.org].filter(v => v && v !== "—").join(" · ");
-    h += `<tr class="${rc}">
-      <td class="c-mono">${esc(r.asset)} <span class="c-dim" style="font-size:10px">${esc(r.type||"")}</span></td>
-      <td class="c-dim">${esc(r.dns && r.dns !== "self (ip)" ? r.dns : "—")}</td>
-      <td class="c-dim c-trunc" title="${esc(geo)}">${esc(geo||"—")}</td>
-      <td>${_risk(r.shodan_risk, r.shodan_ports, r.shodan_vulns)}</td>
-      <td>${_risk(r.netlas_risk, r.netlas_ports, r.netlas_vulns)}</td>
-      <td>${r.max_risk && r.max_risk !== "—" ? badge(r.max_risk) : '<span class="muted">—</span>'}</td>
-      ${readonly ? "" : `<td><button class="asset-rm" title="remove ${esc(r.asset)}"
-        onclick="window.rmTarget(${jsq(r.asset)})">✕</button></td>`}
-    </tr>`;
+  let h = "";
+  if (!rows.length) {
+    h += `<div class="empty-note">No assets yet — add an IP or domain below.</div>`;
+  } else {
+    h += `<table><thead><tr>
+      <th>Asset</th><th>DNS</th><th>Country/Org</th><th>Shodan</th><th>Netlas</th><th>Worst</th>
+      ${readonly ? "" : "<th></th>"}
+    </tr></thead><tbody>`;
+    for (const r of rows) {
+      const risk = String(r.max_risk || "").toLowerCase();
+      const rc = (risk === "critical" || risk === "high") ? "r-crit" : risk === "medium" ? "r-high" : "";
+      const geo = [r.country, r.org].filter(v => v && v !== "—").join(" · ");
+      h += `<tr class="${rc}">
+        <td class="c-mono">${esc(r.asset)} <span class="c-dim" style="font-size:10px">${esc(r.type||"")}</span></td>
+        <td class="c-dim">${esc(r.dns && r.dns !== "self (ip)" ? r.dns : "—")}</td>
+        <td class="c-dim c-trunc" title="${esc(geo)}">${esc(geo||"—")}</td>
+        <td>${_risk(r.shodan_risk, r.shodan_ports, r.shodan_vulns)}</td>
+        <td>${_risk(r.netlas_risk, r.netlas_ports, r.netlas_vulns)}</td>
+        <td>${r.max_risk && r.max_risk !== "—" ? badge(r.max_risk) : '<span class="muted">—</span>'}</td>
+        ${readonly ? "" : `<td><button class="asset-rm" title="remove ${esc(r.asset)}"
+          onclick="window.rmTarget(${jsq(r.asset)})">✕</button></td>`}
+      </tr>`;
+    }
+    h += `</tbody></table>`;
   }
-  h += `</tbody></table>`;
 
-  if (!readonly) {
-    h += `<div style="padding:12px 0 4px">
-      <div style="display:flex;gap:6px">
-        <input id="tgt-new" type="text" placeholder="IP or domain…" class="tgt-input"
-          onkeydown="if(event.key==='Enter')window.addTarget()">
-        <button class="tb-btn" onclick="window.addTarget()">+ Add</button>
-      </div></div>`;
-  }
+  // The add form is always shown when not readonly — even on an empty list.
+  if (!readonly) h += _assetAddForm();
   return h;
 }
 
@@ -292,11 +306,11 @@ export function providerBar(data) {
    bgp + root render as one light each; cloud_status explodes into one
    light per configured provider (icon + per-provider status). */
 function _spia(st, ico, label, title, nav) {
-  return `<button class="spia spia-${esc(st)}" title="${esc(title)}"
+  // Icon-only control light: the name lives in the tooltip, not on screen.
+  return `<button class="spia spia-${esc(st)}" title="${esc(title)}" aria-label="${esc(label)}"
       onclick="window.navigate(${jsq(nav)})">
     ${ico ? img(ico, "spia-icon") : ""}
     ${led(st, false)}
-    <span class="spia-lbl">${esc(label)}</span>
   </button>`;
 }
 
@@ -382,9 +396,13 @@ export function bgpWidget(data) {
 /* ── Substatus: how-it-works, redacted config, recent log ───── */
 export function logicBlock(detail) {
   const txt = (detail && detail.logic) || "";
-  if (!txt) return "";
-  return `<div class="sect-title">How it works</div>
+  const it  = (detail && detail.help_it) || "";
+  let h = "";
+  if (txt) h += `<div class="sect-title">How it works</div>
     <pre class="logic-pre">${esc(txt)}</pre>`;
+  if (it) h += `<div class="sect-title">Come funziona e configurazione 🇮🇹</div>
+    <pre class="logic-pre logic-it">${esc(it)}</pre>`;
+  return h;
 }
 
 export function configBlock(detail) {
@@ -424,13 +442,16 @@ export function toolRunner(sid, detail) {
     const meta = avail.get(d.tool) || { available: false, extra: null, hint: "" };
     const key  = `${sid}:${i}`;
     const out  = STATE.toolOut[key];
-    const disabled = !meta.available || STATE.ui.readonly;
+    // Inputs stay editable even in readonly: the API key is requested at run
+    // time (window.runTool prompts for it). Only an unavailable binary disables.
+    const disabled = !meta.available;
     const extraInput = meta.extra
       ? `<input class="tr-extra" id="tr-extra-${esc(sid)}-${i}" value="${esc(d.extra || "")}"
            placeholder="${esc(meta.extra)}" ${disabled ? "disabled" : ""}>`
       : "";
-    const note = STATE.ui.readonly ? "readonly — set CTI_API_KEY"
-               : !meta.available ? `${esc(d.tool)} not installed` : esc(meta.hint || "");
+    const note = !meta.available ? `${esc(d.tool)} not installed`
+               : STATE.ui.readonly ? "enter your API key when you press run"
+               : esc(meta.hint || "");
     let outHtml = "";
     if (out) {
       const cls = out.ok ? "tr-ok" : "tr-fail";

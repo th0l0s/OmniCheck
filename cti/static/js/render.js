@@ -91,10 +91,6 @@ function _overviewPage() {
   let html = `<div class="pg-hdr"><h1 class="pg-title">Essentials</h1>
     <div class="pg-sub c-dim">Public-probe internet health · the spie above watch BGP, cloud and the DNS root</div></div>`;
 
-  if (l0.length) {
-    html += `<div class="mon-grid">${l0.map(monitorCard).join("")}</div>`;
-  }
-
   // Monitored domains (dnsmon) and Italian backbone BGP states (bgp),
   // surfaced here even though their cards/spie live elsewhere.
   const dnsData = (STATE.data["dnsmon"] || {}).data;
@@ -123,6 +119,12 @@ function _overviewPage() {
       <div class="sc-sub">engines &amp; config</div></div>
     </button>
   </div>`;
+
+  // Engine cards last, at the bottom of the page.
+  if (l0.length) {
+    html += `<div class="sect-title">Engines</div>
+      <div class="mon-grid">${l0.map(monitorCard).join("")}</div>`;
+  }
   return html;
 }
 
@@ -132,9 +134,7 @@ function _checkPage() {
   let html = `<div class="pg-hdr"><h1 class="pg-title">Check</h1>
     <div class="pg-sub c-dim">Configured intelligence APIs and the assets correlated from their results</div></div>`;
 
-  if (l1.length) {
-    html += `<div class="mon-grid">${l1.map(monitorCard).join("")}</div>`;
-  } else {
+  if (!l1.length) {
     html += `<div class="empty-note">No API is configured yet — add credentials in <code>config.yaml</code>.</div>`;
   }
 
@@ -152,6 +152,12 @@ function _checkPage() {
     html += `<div class="sect-title">Assets — correlated engine results</div>`;
     html += intelWidget(dd.data || null, STATE.ui.readonly);
   }
+
+  // Engine cards last, at the bottom of the page.
+  if (l1.length) {
+    html += `<div class="sect-title">Engines</div>
+      <div class="mon-grid">${l1.map(monitorCard).join("")}</div>`;
+  }
   return html;
 }
 
@@ -165,8 +171,6 @@ function _advancedPage() {
     return html + `<div class="empty-note">No Advanced-layer engines registered.</div>`;
   }
 
-  html += `<div class="mon-grid">${adv.map(monitorCard).join("")}</div>`;
-
   for (const s of adv) {
     const dd   = STATE.data[s.id] || {};
     const data = dd.data;
@@ -178,6 +182,10 @@ function _advancedPage() {
       html += tableHtml(sch.table, { [sch.table.rows_key]: rows.slice(0, 25) }, null, null);
     }
   }
+
+  // Engine cards last, at the bottom of the page.
+  html += `<div class="sect-title">Engines</div>
+    <div class="mon-grid">${adv.map(monitorCard).join("")}</div>`;
   return html;
 }
 
@@ -284,8 +292,6 @@ function _feedsPage() {
     return html + `<div class="empty-note">No Info-layer feed sources configured.</div>`;
   }
 
-  html += `<div class="mon-grid">${feeds.map(monitorCard).join("")}</div>`;
-
   for (const s of feeds) {
     const dd   = STATE.data[s.id] || {};
     const data = dd.data;
@@ -300,6 +306,10 @@ function _feedsPage() {
       html += tableHtml(sch.table, { [sch.table.rows_key]: rows.slice(0, 15) }, null, null);
     }
   }
+
+  // Engine cards last, at the bottom of the page.
+  html += `<div class="sect-title">Engines</div>
+    <div class="mon-grid">${feeds.map(monitorCard).join("")}</div>`;
   return html;
 }
 

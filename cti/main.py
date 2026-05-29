@@ -228,6 +228,7 @@ async def api_source_detail(source_id: str):
         "layer": state.layer,
         "kind": state.kind,
         "logic": logic,
+        "help_it": (sch.get("help_it") or "").strip(),
         "config": _redact(scfg),
         "events": store.tail_events(source_id, limit=20),
         "tools": sch.get("tools", []),

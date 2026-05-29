@@ -317,6 +317,20 @@ tr.r-high td  { background: color-mix(in srgb, var(--c-warn) 4%, transparent); }
 }
 .tgt-input:focus { border-color: var(--c-accent); }
 
+/* ══ Asset add form (IP or domain) ═══════════════════════════ */
+.asset-add { padding: 12px 0 4px; }
+.asset-add-row { display: flex; gap: 6px; align-items: center; }
+.asset-kind {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 56px;
+  text-align: right;
+}
+.asset-add-note { font-size: 11px; margin-top: 5px; }
+.c-ok   { color: var(--c-ok); }
+.c-warn { color: var(--c-warn); }
+
 /* ══ Chips for kind/layer ════════════════════════════════════ */
 .kind-chip, .layer-chip {
   font-size: 0.65rem;

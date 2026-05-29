@@ -126,6 +126,14 @@ def schema() -> dict:
     return {
         "title": "Shodan Intel",
         "description": "IP threat intelligence and risk scoring for monitored hosts via Shodan API",
+        "help_it": (
+            "Funzione: per ogni IP monitorato interroga l'API di Shodan e calcola un "
+            "punteggio di rischio a partire dalle porte esposte e dalle CVE note. "
+            "L'aggiornamento è giornaliero per non consumare i crediti di query.\n\n"
+            "Configurazione: `sources.shodan.api_key` (Shodan → Account → API Key). "
+            "Gli IP analizzati arrivano da assets.yaml (lista `ips:`); in alternativa "
+            "`sources.shodan.targets`. Intervallo: 24h."
+        ),
         "icon": "/icons/security/icons8-nmap-50.png",
         "category": "api",
         "summary_keys": ["hosts_total", "at_risk"],

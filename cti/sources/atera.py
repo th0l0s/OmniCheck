@@ -86,6 +86,15 @@ def schema() -> dict:
     return {
         "title": "Atera RMM",
         "description": "RMM alerts, open tickets, and offline servers from the Atera platform",
+        "help_it": (
+            "Funzione: interroga l'API di Atera RMM e mostra prima i ticket aperti, "
+            "poi gli ultimi 5 allarmi e i server monitorati offline. L'invio di "
+            "notifiche è volutamente assente: l'alerting spetta a un notifier, non "
+            "a una sorgente.\n\n"
+            "Configurazione: in config.yaml impostare `sources.atera.api_key` con la "
+            "chiave API Atera (Admin → API). Nessun altro parametro è richiesto. "
+            "Intervallo di aggiornamento: 120s."
+        ),
         "icon": ICON,
         "category": "api",
         "summary_keys": ["tickets_open", "tickets_triage", "alerts_total", "servers_offline"],
