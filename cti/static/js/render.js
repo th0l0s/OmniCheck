@@ -7,6 +7,7 @@ import {
   sourceStatus, layerOf, kindOf, overviewOf, isConfigured,
   sourcesByLayer, globalStatus, layerLabel,
   spie, logicBlock, configBlock, eventsBlock, toolRunner,
+  domainsWidget, bgpWidget, ateraWidget,
 } from './components.js';
 
 /* ── Top-level render ───────────────────────────────────────── */
@@ -41,12 +42,14 @@ function _sidebar() {
   const r = STATE.route;
   const feedN  = sourcesByLayer(2).length;
   const checkN = STATE.sources.filter(s => layerOf(s) === 1 && isConfigured(s)).length;
+  const advN   = sourcesByLayer(4).length;
   const errN   = STATE.sources.filter(s => s.enabled && !s.ok).length;
 
   const links = [
     { id: "overview",  label: "Essentials", glyph: "◈" },
     { id: "check",     label: `Check${checkN ? ` (${checkN})` : ""}`, glyph: "◎" },
-    { id: "feeds",     label: `Info${feedN ? ` (${feedN})` : ""}`, glyph: "⊞" },
+    { id: "info",      label: `Info${feedN ? ` (${feedN})` : ""}`, glyph: "⊞" },
+    { id: "advanced",  label: `Advanced${advN ? ` (${advN})` : ""}`, glyph: "◇" },
     { id: "status",    label: `Status${errN ? ` ⚑${errN}` : ""}`, glyph: "⊙" },
   ];
 
@@ -72,7 +75,8 @@ function _content() {
   const { route, routeParam } = STATE;
   if      (route === "source" && routeParam) el.innerHTML = _sourcePage(routeParam);
   else if (route === "check")                el.innerHTML = _checkPage();
-  else if (route === "feeds")                el.innerHTML = _feedsPage();
+  else if (route === "info" || route === "feeds") el.innerHTML = _feedsPage();
+  else if (route === "advanced")             el.innerHTML = _advancedPage();
   else if (route === "status")               el.innerHTML = _statusPage();
   else                                       el.innerHTML = _overviewPage();
 }
@@ -89,8 +93,17 @@ function _overviewPage() {
 
   if (l0.length) {
     html += `<div class="mon-grid">${l0.map(monitorCard).join("")}</div>`;
-  } else {
-    html += `<div class="empty-note">All essentials are promoted to the header spie.</div>`;
+  }
+
+  // Monitored domains (dnsmon) and Italian backbone BGP states (bgp),
+  // surfaced here even though their cards/spie live elsewhere.
+  const dnsData = (STATE.data["dnsmon"] || {}).data;
+  if (dnsData) {
+    html += `<div class="sect-title">Monitored Domains</div>` + domainsWidget(dnsData);
+  }
+  const bgpData = (STATE.data["bgp"] || {}).data;
+  if (bgpData) {
+    html += `<div class="sect-title">BGP — Italian backbone</div>` + bgpWidget(bgpData);
   }
 
   html += `<div class="ov-shortcuts">
@@ -99,7 +112,7 @@ function _overviewPage() {
       <div><div class="sc-name">Check</div>
       <div class="sc-sub">${checkN} configured API${checkN !== 1 ? "s" : ""} · assets</div></div>
     </button>
-    <button class="sc-btn" onclick="window.navigate('feeds')">
+    <button class="sc-btn" onclick="window.navigate('info')">
       <span class="sc-glyph">⊞</span>
       <div><div class="sc-name">Info</div>
       <div class="sc-sub">${feedN} feed source${feedN !== 1 ? "s" : ""}</div></div>
@@ -125,12 +138,45 @@ function _checkPage() {
     html += `<div class="empty-note">No API is configured yet — add credentials in <code>config.yaml</code>.</div>`;
   }
 
+  // Atera RMM: last 5 alerts + open tickets, surfaced inline.
+  const atera = STATE.sources.find(s => s.id === "atera" && isConfigured(s));
+  if (atera) {
+    html += `<div class="sect-title">Atera RMM — alerts &amp; tickets</div>`;
+    html += ateraWidget((STATE.data["atera"] || {}).data);
+  }
+
   // Correlated assets: the `assets` source carries the cross-engine intel view.
   const assets = STATE.sources.find(s => s.id === "assets");
   if (assets) {
     const dd = STATE.data["assets"] || {};
     html += `<div class="sect-title">Assets — correlated engine results</div>`;
     html += intelWidget(dd.data || null, STATE.ui.readonly);
+  }
+  return html;
+}
+
+/* ── Advanced (L4): correlation + STIX export engines ───────── */
+function _advancedPage() {
+  const adv = sourcesByLayer(4);
+  let html = `<div class="pg-hdr"><h1 class="pg-title">Advanced</h1>
+    <div class="pg-sub c-dim">Cross-engine correlation and threat-intel export</div></div>`;
+
+  if (!adv.length) {
+    return html + `<div class="empty-note">No Advanced-layer engines registered.</div>`;
+  }
+
+  html += `<div class="mon-grid">${adv.map(monitorCard).join("")}</div>`;
+
+  for (const s of adv) {
+    const dd   = STATE.data[s.id] || {};
+    const data = dd.data;
+    const sch  = s.schema || {};
+    if (!data) continue;
+    html += `<div class="sect-title">${esc(s.name)}</div>`;
+    if (sch.table) {
+      const rows = data[sch.table.rows_key] || [];
+      html += tableHtml(sch.table, { [sch.table.rows_key]: rows.slice(0, 25) }, null, null);
+    }
   }
   return html;
 }
@@ -265,9 +311,12 @@ function _statusPage() {
   if (st) {
     const up = st.uptime_s || 0;
     const upStr = up < 3600 ? `${Math.round(up/60)}m` : `${Math.floor(up/3600)}h ${Math.round((up%3600)/60)}m`;
+    const dShort = v => v ? esc(String(v).slice(0, 10)) : "—";
     html += `<div class="kv-grid">
       <div class="kv-item"><div class="kv-v c-mono">${esc(st.version||"")}</div><div class="kv-k">version</div></div>
       <div class="kv-item"><div class="kv-v">${esc(upStr)}</div><div class="kv-k">uptime</div></div>
+      <div class="kv-item"><div class="kv-v c-mono">${dShort(st.installed_at)}</div><div class="kv-k">installed</div></div>
+      <div class="kv-item"><div class="kv-v c-mono">${dShort(st.updated_at)}</div><div class="kv-k">last update</div></div>
       <div class="kv-item"><div class="kv-v c-mono">${esc(st.python||"")}</div><div class="kv-k">python</div></div>
       <div class="kv-item"><div class="kv-v">${esc(st.sources_ok||0)}/${esc(st.sources_total||0)}</div><div class="kv-k">sources OK</div></div>
     </div>`;
@@ -287,7 +336,7 @@ function _statusPage() {
   }
 
   // Source table grouped by layer
-  for (const layer of [0, 1, 2]) {
+  for (const layer of [0, 1, 2, 4]) {
     const srcs = STATE.sources.filter(s => layerOf(s) === layer);
     if (!srcs.length) continue;
     html += `<div class="sect-title">L${layer} — ${esc(layerLabel(layer))}</div>

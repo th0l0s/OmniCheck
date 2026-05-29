@@ -259,6 +259,39 @@
 /* ══ Page subtitle ═══════════════════════════════════════════ */
 .pg-sub { font-size: 0.76rem; margin-top: 2px; }
 
+/* ══ Misc notes / subsections ════════════════════════════════ */
+.ok-note {
+  color: var(--c-ok);
+  background: color-mix(in srgb, var(--c-ok) 8%, transparent);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  margin: var(--s2) 0;
+}
+.sect-sub {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--fg-dim);
+  margin: var(--s3) 0 6px;
+}
+.asset-rm {
+  background: none;
+  border: 1px solid var(--border-hi);
+  color: var(--fg-dim);
+  border-radius: 4px;
+  width: 22px; height: 22px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color .1s, border-color .1s;
+}
+.asset-rm:hover { color: var(--c-err); border-color: var(--c-err); }
+
+/* brand is now a link to the Check dashboard */
+.tb-brand { text-decoration: none; color: inherit; cursor: pointer; }
+.tb-brand:hover .tb-name { color: var(--c-accent); }
+
 /* ══ Substatus: logic / config / log ═════════════════════════ */
 .logic-pre, .cfg-pre {
   font-family: var(--mono);

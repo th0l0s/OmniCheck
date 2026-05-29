@@ -2,7 +2,7 @@
 import { STATE, tlGet, SPIE } from './state.js';
 
 /* ── Layer naming (L0 essentials · L1 check · L2 info) ──────── */
-const _LAYER_LABEL = { 0: "Essentials", 1: "Check", 2: "Info" };
+const _LAYER_LABEL = { 0: "Essentials", 1: "Check", 2: "Info", 4: "Advanced" };
 export function layerLabel(n) { return _LAYER_LABEL[n] || `L${n}`; }
 
 /* ── Escape helpers ─────────────────────────────────────────── */
@@ -199,6 +199,7 @@ export function intelWidget(data, readonly) {
 
   let h = `<table><thead><tr>
     <th>Asset</th><th>DNS</th><th>Country/Org</th><th>Shodan</th><th>Netlas</th><th>Worst</th>
+    ${readonly ? "" : "<th></th>"}
   </tr></thead><tbody>`;
   for (const r of rows) {
     const risk = String(r.max_risk || "").toLowerCase();
@@ -211,6 +212,8 @@ export function intelWidget(data, readonly) {
       <td>${_risk(r.shodan_risk, r.shodan_ports, r.shodan_vulns)}</td>
       <td>${_risk(r.netlas_risk, r.netlas_ports, r.netlas_vulns)}</td>
       <td>${r.max_risk && r.max_risk !== "—" ? badge(r.max_risk) : '<span class="muted">—</span>'}</td>
+      ${readonly ? "" : `<td><button class="asset-rm" title="remove ${esc(r.asset)}"
+        onclick="window.rmTarget(${jsq(r.asset)})">✕</button></td>`}
     </tr>`;
   }
   h += `</tbody></table>`;
@@ -222,6 +225,45 @@ export function intelWidget(data, readonly) {
           onkeydown="if(event.key==='Enter')window.addTarget()">
         <button class="tb-btn" onclick="window.addTarget()">+ Add</button>
       </div></div>`;
+  }
+  return h;
+}
+
+/* ── Atera widget: last 5 alerts + open tickets ─────────────── */
+export function ateraWidget(data) {
+  if (!data) return `<div class="empty-note">No Atera data yet.</div>`;
+  const alerts  = (data.alert_rows || []).slice(0, 5);
+  const tickets = data.ticket_rows || [];
+
+  let h = `<div class="kv-grid">
+    <div class="kv-item"><div class="kv-v">${esc(data.tickets_open ?? 0)}</div><div class="kv-k">open tickets</div></div>
+    <div class="kv-item"><div class="kv-v">${esc(data.tickets_triage ?? 0)}</div><div class="kv-k">triage</div></div>
+    <div class="kv-item"><div class="kv-v">${esc(data.alerts_total ?? 0)}</div><div class="kv-k">alerts</div></div>
+    <div class="kv-item"><div class="kv-v">${esc(data.servers_offline ?? 0)}</div><div class="kv-k">servers offline</div></div>
+  </div>`;
+
+  h += `<div class="sect-sub">Recent alerts (last 5)</div>`;
+  if (!alerts.length) {
+    h += `<div class="empty-note">No open alerts.</div>`;
+  } else {
+    h += `<table><thead><tr><th>Severity</th><th>Alert</th><th>Device</th><th>When</th></tr></thead><tbody>`;
+    for (const a of alerts) {
+      h += `<tr><td>${badge(a.severity || "—")}</td><td>${esc(a.title)}</td>
+        <td class="c-dim">${esc(a.device || "")}</td><td class="c-mono c-dim">${esc(a.created || "")}</td></tr>`;
+    }
+    h += `</tbody></table>`;
+  }
+
+  h += `<div class="sect-sub">Open tickets</div>`;
+  if (!tickets.length) {
+    h += `<div class="empty-note">No open tickets.</div>`;
+  } else {
+    h += `<table><thead><tr><th>Ticket</th><th>Customer</th><th>Priority</th><th>Created</th></tr></thead><tbody>`;
+    for (const t of tickets.slice(0, 15)) {
+      h += `<tr><td>${esc(t.title)}</td><td class="c-dim">${esc(t.customer || "")}</td>
+        <td>${badge(t.priority || "—")}</td><td class="c-mono c-dim">${esc(t.created || "")}</td></tr>`;
+    }
+    h += `</tbody></table>`;
   }
   return h;
 }
@@ -246,24 +288,95 @@ export function providerBar(data) {
   }).join("")}</div>`;
 }
 
-/* ── Header "spie": L0 control-lights (bgp/cloud/root) ───────── */
+/* ── Header "spie": L0 control-lights ────────────────────────
+   bgp + root render as one light each; cloud_status explodes into one
+   light per configured provider (icon + per-provider status). */
+function _spia(st, ico, label, title, nav) {
+  return `<button class="spia spia-${esc(st)}" title="${esc(title)}"
+      onclick="window.navigate(${jsq(nav)})">
+    ${ico ? img(ico, "spia-icon") : ""}
+    ${led(st, false)}
+    <span class="spia-lbl">${esc(label)}</span>
+  </button>`;
+}
+
 export function spie() {
-  const items = SPIE
-    .map(id => STATE.sources.find(s => s.id === id))
-    .filter(Boolean);
-  if (!items.length) return "";
-  return items.map(s => {
-    const st  = sourceStatus(s);
-    const ico = (s.schema && s.schema.icon) || "";
-    const nav = jsq("source/" + s.id);
-    const lbl = (s.schema && s.schema.spie_label) || s.name;
-    return `<button class="spia spia-${esc(st)}" title="${esc(s.name)} — ${esc(st)}"
-        onclick="window.navigate(${nav})">
-      ${ico ? img(ico, "spia-icon") : ""}
-      ${led(st, false)}
-      <span class="spia-lbl">${esc(lbl)}</span>
-    </button>`;
-  }).join("");
+  let out = "";
+  for (const id of SPIE) {
+    const s = STATE.sources.find(x => x.id === id);
+    if (!s) continue;
+
+    if (id === "cloud_status") {
+      const provs = ((STATE.data["cloud_status"] || {}).data || {}).rows || [];
+      if (!provs.length) {
+        out += _spia(sourceStatus(s), (s.schema && s.schema.icon) || "", "cloud", "Cloud Status", "source/cloud_status");
+        continue;
+      }
+      for (const p of provs) {
+        const st = p.status === "ok" ? "ok"
+                 : p.status === "critical" || p.status === "major" ? "critical"
+                 : p.status === "warning" ? "warning"
+                 : p.status === "error" ? "source_error"
+                 : "config";
+        const det = p.incidents ? ` — ${p.incidents} incident(s)` : (p.detail ? ` — ${p.detail}` : "");
+        out += _spia(st, p.icon || "", p.provider, `${p.provider} (${p.status})${det}`, "source/cloud_status");
+      }
+    } else {
+      out += _spia(sourceStatus(s), (s.schema && s.schema.icon) || "", s.name, `${s.name} — ${sourceStatus(s)}`, "source/" + id);
+    }
+  }
+  return out;
+}
+
+/* ── Essentials: monitored domains (dnsmon) ─────────────────── */
+export function domainsWidget(data) {
+  const rows = (data && data.rows) || [];
+  if (!rows.length) return `<div class="empty-note">No domains under monitoring.</div>`;
+  let h = `<table><thead><tr>
+    <th>Domain</th><th>Status</th><th>NS OK</th><th>SOA Serial</th><th>ms</th>
+  </tr></thead><tbody>`;
+  for (const r of rows) {
+    const st = String(r.status || "").toLowerCase();
+    const cls = (st === "critical") ? "r-crit" : (st === "warning" || st === "diverged") ? "r-high" : "";
+    h += `<tr class="${cls}">
+      <td class="c-mono">${esc(r.domain)}</td>
+      <td>${badge(r.status || "—")}</td>
+      <td class="c-dim">${esc(r.ns_ok ?? "—")}</td>
+      <td class="c-mono c-dim">${esc(r.serial ?? "—")}</td>
+      <td class="c-mono c-dim">${esc(r.latency_ms ?? "—")}</td>
+    </tr>`;
+  }
+  return h + `</tbody></table>`;
+}
+
+/* ── Essentials: Italian backbone BGP states (bgp) ──────────── */
+export function bgpWidget(data) {
+  const rows = (data && data.rows) || [];
+  if (!rows.length) return `<div class="empty-note">No BGP assessments yet.</div>`;
+  const bad = r => ["warning", "critical", "source_error"].includes(String(r.severity).toLowerCase());
+  const problems = rows.filter(bad);
+  const ranked = [...problems, ...rows.filter(r => !bad(r))];
+
+  const lead = problems.length
+    ? `<div class="errline">⚠ ${problems.length} operator${problems.length > 1 ? "s" : ""} with BGP/RPKI issues</div>`
+    : `<div class="ok-note">✓ All monitored Italian operators clean (RPKI/IRR/visibility)</div>`;
+
+  let h = lead + `<table><thead><tr>
+    <th>Operator</th><th>ASN</th><th>Group</th><th>Severity</th><th>Risk</th><th>Prefixes</th>
+  </tr></thead><tbody>`;
+  for (const r of ranked) {
+    const cls = String(r.severity).toLowerCase() === "critical" ? "r-crit"
+              : bad(r) ? "r-high" : "";
+    h += `<tr class="${cls}">
+      <td>${esc(r.target)}</td>
+      <td class="c-mono">${esc(r.asn)}</td>
+      <td class="c-dim">${esc(r.group || "—")}</td>
+      <td>${badge(r.severity || "—")}</td>
+      <td class="c-dim">${esc(r.risk_score ?? "—")}</td>
+      <td class="c-dim">${esc(r.prefixes ?? "—")}</td>
+    </tr>`;
+  }
+  return h + `</tbody></table>`;
 }
 
 /* ── Substatus: how-it-works, redacted config, recent log ───── */

@@ -101,7 +101,7 @@ async def api_sources():
     return {
         "version": __version__,
         "count": len(out),
-        "layers": {"0": "essentials", "1": "check", "2": "info"},
+        "layers": {"0": "essentials", "1": "check", "2": "info", "4": "advanced"},
         "sources": out,
     }
 
@@ -129,6 +129,17 @@ async def api_health():
     }
 
 
+def _last_updated() -> str | None:
+    """Newest mtime among the package's .py files — i.e. when the code last
+    changed on disk. A pragmatic 'last update' without a git dependency."""
+    try:
+        pkg = Path(__file__).resolve().parent
+        newest = max(f.stat().st_mtime for f in pkg.rglob("*.py"))
+        return datetime.fromtimestamp(newest, timezone.utc).isoformat(timespec="seconds")
+    except Exception:
+        return None
+
+
 @app.get("/api/status")
 async def api_status():
     """Diagnostics for the status/about page: runtime info + config/runtime issues."""
@@ -148,6 +159,8 @@ async def api_status():
         "debug": bool(CFG.get("debug")),
         "now": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "uptime_s": up,
+        "installed_at": store.get_or_init_install(),
+        "updated_at": _last_updated(),
         "python": sys.version.split()[0],
         "platform": platform.platform(),
         "host": CFG.get("host", "0.0.0.0"),

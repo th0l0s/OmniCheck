@@ -12,13 +12,14 @@
 </head>
 <body>
   <header id="topbar">
-    <div class="tb-brand">
+    <a class="tb-brand" href="#/check" onclick="event.preventDefault();window.navigate('check')"
+       title="Go to Check dashboard">
       <img class="tb-logo" src="/icons/logo/icons8-decentralized-network-48.png" alt="">
       <div>
         <div class="tb-name">OmniCheck <em>Cockpit</em></div>
         <div class="tb-sub">CTI &amp; infrastructure sentinel</div>
       </div>
-    </div>
+    </a>
     <div class="tb-center">
       <span id="global-led" class="led led-lg led-off" title="Global status"></span>
       <span id="sources-ok" class="tb-stat">—</span>

@@ -55,6 +55,27 @@ def load_source(source_id: str) -> Any:
     return read_json(_CACHE_DIR / f"{source_id}.json", default=None)
 
 
+_INSTALL = _DIR / "install.json"
+
+
+def get_or_init_install() -> str | None:
+    """First-install timestamp (ISO). Written once, on first call; stable after.
+    Returns None only if the state dir is unwritable."""
+    existing = read_json(_INSTALL, default=None)
+    if isinstance(existing, dict) and existing.get("installed_at"):
+        return existing["installed_at"]
+    if not _ensure():
+        return None
+    from datetime import datetime, timezone
+    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    try:
+        write_json(_INSTALL, {"installed_at": ts})
+    except Exception as exc:
+        log.warning("init install marker failed: %s", exc)
+        return None
+    return ts
+
+
 _FIRST_SEEN = _DIR / "first_seen.json"
 
 
