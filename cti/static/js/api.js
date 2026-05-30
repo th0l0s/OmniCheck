@@ -37,6 +37,7 @@ export async function loadAll() {
     STATE.status = await fetchJSON("/api/status").catch(() => null);
     if (!STATE.tools.length)
       STATE.tools = (await fetchJSON("/api/tools").catch(() => ({ tools: [] }))).tools || [];
+    STATE.pubip = (await fetchJSON("/api/pubip").catch(() => ({ ip: "—" }))).ip || "—";
     STATE.next = STATE.refreshMs / 1000;
 
     const tl = document.getElementById("ts-lbl");

@@ -6,13 +6,14 @@ import {
   intelWidget, providerBar, feedsWidget,
   sourceStatus, layerOf, kindOf, overviewOf, isConfigured,
   sourcesByLayer, globalStatus, layerLabel,
-  spie, logicBlock, configBlock, eventsBlock, toolRunner,
+  spie, bgpBar, logicBlock, configBlock, eventsBlock, toolRunner,
   domainsWidget, bgpWidget, ateraWidget,
 } from './components.js';
 
 /* ── Top-level render ───────────────────────────────────────── */
 export function render() {
   _topbar();
+  _bgpBar();
   _sidebar();
   _content();
 }
@@ -33,6 +34,19 @@ function _topbar() {
 
   const spEl = document.getElementById("tb-spie");
   if (spEl) spEl.innerHTML = spie();
+
+  const ipEl = document.getElementById("tb-pubip");
+  if (ipEl && STATE.pubip && STATE.pubip !== "—") ipEl.textContent = STATE.pubip;
+}
+
+/* ── BGP second toolbar ─────────────────────────────────────── */
+function _bgpBar() {
+  const bar = document.getElementById("bgp-bar");
+  if (!bar) return;
+  const inner = document.getElementById("bgp-bar-inner");
+  const content = bgpBar();
+  if (inner) inner.innerHTML = content;
+  bar.style.display = content ? "flex" : "none";
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────── */

@@ -25,15 +25,29 @@ NAME = "BGP Watch IT"
 INTERVAL = 1800  # 30 min
 
 _DEFAULT_TARGETS = [
-    {"name": "TIM", "group": "italian-isp", "role": "isp", "asns": [3269, 16232, 20746]},
-    {"name": "Wind Tre", "group": "italian-isp", "role": "isp", "asns": [1267, 24608]},
-    {"name": "Fastweb", "group": "italian-isp", "role": "isp", "asns": [12874]},
-    {"name": "Vodafone Italia", "group": "italian-isp", "role": "isp", "asns": [30722, 12663]},
-    {"name": "Tiscali", "group": "italian-isp", "role": "isp", "asns": [8612]},
-    {"name": "EOLO", "group": "italian-isp", "role": "isp", "asns": [35612]},
-    {"name": "Open Fiber", "group": "italian-isp", "role": "isp", "asns": [210218]},
-    {"name": "Aruba", "group": "italian-datacenter", "role": "datacenter", "asns": [31034]},
-    {"name": "Retelit", "group": "italian-datacenter", "role": "datacenter", "asns": [3302]},
+    {"name": "TIM", "group": "italian-isp", "role": "isp", "asns": [3269, 16232, 20746],
+     "status_url": "https://www.tim.it/assistenza/per-i-tuoi-servizi/connettivita/verifica-disservizi"},
+    {"name": "Wind Tre", "group": "italian-isp", "role": "isp", "asns": [1267, 24608],
+     "status_url": "https://www.windtre.it/assistenza/linea/verifica-linea/"},
+    {"name": "Fastweb", "group": "italian-isp", "role": "isp", "asns": [12874],
+     "status_url": "https://www.fastweb.it/assistenza/"},
+    {"name": "Vodafone IT", "group": "italian-isp", "role": "isp", "asns": [30722, 12663],
+     "status_url": "https://www.vodafone.it/portal/Privati/Assistenza/Assistenza-rete"},
+    {"name": "Tiscali", "group": "italian-isp", "role": "isp", "asns": [8612],
+     "status_url": "https://www.tiscali.it/assistenza/"},
+    {"name": "EOLO", "group": "italian-isp", "role": "isp", "asns": [35612],
+     "status_url": "https://www.eolo.it/home/assistenza/verifica-linea.html"},
+    {"name": "Open Fiber", "group": "italian-isp", "role": "isp", "asns": [210218],
+     "status_url": "https://openfiber.it/fibra-ottica/mappa-copertura-fibra/"},
+    {"name": "Aruba", "group": "italian-datacenter", "role": "datacenter", "asns": [31034],
+     "status_url": "https://www.aruba.it/assistenza/home.aspx"},
+    {"name": "Retelit", "group": "italian-datacenter", "role": "datacenter", "asns": [3302],
+     "status_url": "https://www.retelit.it/contatti/"},
+    # IXP / neutral exchanges
+    {"name": "MIX", "group": "italian-ixp", "role": "ixp", "asns": [61968],
+     "status_url": "https://www.mix-it.net/"},
+    {"name": "TOP-IX", "group": "italian-ixp", "role": "ixp", "asns": [49605],
+     "status_url": "https://www.top-ix.org/en/"},
 ]
 
 _POLICY = {
@@ -161,10 +175,12 @@ async def _assess_prefix(client, asn, prefix):
 
 async def _assess_asn(client, target, asn):
     prefixes = await _announced(client, asn)
+    base = {"name": target["name"], "asn": asn, "group": target.get("group"),
+            "role": target.get("role"), "status_url": target.get("status_url", "")}
     if not prefixes:
-        return {"name": target["name"], "asn": asn, "group": target.get("group"),
-                "severity": "source_error", "risk_score": 0, "reasons": ["source_error"],
-                "prefixes_total": 0, "prefixes_checked": 0, "assessments": []}
+        return {**base, "severity": "source_error", "risk_score": 0,
+                "reasons": ["source_error"], "prefixes_total": 0,
+                "prefixes_checked": 0, "assessments": []}
     checked = prefixes[:MAX_PREFIXES]
     results = await asyncio.gather(*[_assess_prefix(client, asn, p) for p in checked])
     rank = {"ok": 0, "info": 1, "source_error": 1, "warning": 2, "critical": 3}
@@ -174,8 +190,7 @@ async def _assess_asn(client, target, asn):
         risk = max(risk, r["risk_score"])
         if rank.get(r["severity"], 0) > worst:
             worst, sev = rank[r["severity"]], r["severity"]
-    return {"name": target["name"], "asn": asn, "group": target.get("group"),
-            "role": target.get("role"), "severity": sev, "risk_score": risk,
+    return {**base, "severity": sev, "risk_score": risk,
             "prefixes_total": len(prefixes), "prefixes_checked": len(checked),
             "assessments": results}
 
@@ -208,7 +223,8 @@ def parse(raw: dict) -> dict:
         "critical": critical,
         "rows": [{"target": t["name"], "asn": f"AS{t['asn']}", "group": t.get("group", ""),
                   "severity": t["severity"], "risk_score": t["risk_score"],
-                  "prefixes": t.get("prefixes_checked", 0)} for t in targets],
+                  "prefixes": t.get("prefixes_checked", 0),
+                  "status_url": t.get("status_url", "")} for t in targets],
     }
 
 

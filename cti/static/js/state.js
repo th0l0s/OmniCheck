@@ -4,7 +4,7 @@ export const STATE = {
   sources: [],
   data: {},
   status: null,
-  ui: { app: "OmniCheck Cockpit", poll_interval_s: 15, readonly: true },
+  ui: { app: "OmniCheck Cockpit", poll_interval_s: 15, readonly: false },
   route: "overview",
   routeParam: null,
   next: 15,
@@ -12,6 +12,7 @@ export const STATE = {
   detail: {},        // id -> {logic, config, events, tools}
   tools: [],         // available diagnostic tool descriptors
   toolOut: {},       // "id:idx" -> last tool run result
+  pubip: "—",        // public IP of this installation (ipify)
 };
 
 /* The three L0 essentials promoted to header control-lights ("spie"). */

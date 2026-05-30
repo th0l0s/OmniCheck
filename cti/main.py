@@ -112,7 +112,7 @@ async def api_ui():
     return {
         "app": "OmniCheck Cockpit",
         "poll_interval_s": int(CFG.get("poll_interval", 15)),
-        "readonly": not bool(os.getenv("CTI_API_KEY", "")),
+        "readonly": False,  # edit controls always visible; key guards API when CTI_API_KEY is set
     }
 
 
@@ -247,9 +247,9 @@ class _ToolIn(BaseModel):
 
 
 @app.post("/api/tool/{name}")
-async def api_tool_run(name: str, payload: _ToolIn, _: None = Depends(require_api_key)):
-    """Run one allowlisted, read-only diagnostic. Requires X-API-Key. Arguments
-    are validated and passed as an argv list — never a shell string."""
+async def api_tool_run(name: str, payload: _ToolIn):
+    """Run one allowlisted, read-only diagnostic. No auth required — these are
+    read-only network probes. Arguments are validated and exec'd as an argv list."""
     return await tools.run(name, payload.target, payload.extra)
 
 
@@ -293,6 +293,55 @@ async def api_targets_post(payload: _TargetsIn, _: None = Depends(require_api_ke
     except Exception as exc:
         log.exception("targets update failed")
         raise HTTPException(400, f"Could not update targets: {exc}")
+
+
+class _ImportIn(BaseModel):
+    ips: list[str] = []
+    domains: list[str] = []
+
+
+@app.get("/api/targets/export")
+async def api_targets_export():
+    """Export current watchlists as JSON — handy for migration between workstations."""
+    from . import targets as tgt
+    data = tgt.load()
+    return {"ips": data["ips"], "domains": data["domains"]}
+
+
+@app.post("/api/targets/import")
+async def api_targets_import(payload: _ImportIn, _: None = Depends(require_api_key)):
+    """Replace the entire watchlist. Accepts JSON {ips:[...], domains:[...]}."""
+    from . import targets as tgt
+    try:
+        ips = [t.strip() for t in payload.ips if t.strip()]
+        domains = [t.strip() for t in payload.domains if t.strip()]
+        tgt.save(ips, domains)
+        return {"ok": True, "ips": sorted(set(ips)), "domains": sorted(set(domains))}
+    except Exception as exc:
+        log.exception("targets import failed")
+        raise HTTPException(400, f"Could not import targets: {exc}")
+
+
+# ── Public IP ──────────────────────────────────────────────────────────────────
+_pubip: dict = {"ip": None, "ts": 0.0}
+
+
+@app.get("/api/pubip")
+async def api_pubip():
+    """Public IP of this installation via ipify.org. Cached for 5 minutes."""
+    now = time.time()
+    if _pubip["ip"] and now - _pubip["ts"] < 300:
+        return {"ip": _pubip["ip"]}
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as c:
+            r = await c.get("https://api.ipify.org", headers={"User-Agent": _USER_AGENT})
+            ip = r.text.strip()
+        if ip:
+            _pubip["ip"] = ip
+            _pubip["ts"] = now
+    except Exception as exc:
+        log.debug("pubip fetch failed: %s", exc)
+    return {"ip": _pubip["ip"] or "—"}
 
 
 @app.post("/api/refresh/{source_id}")

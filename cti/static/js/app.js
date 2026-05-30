@@ -45,15 +45,31 @@ window.setFilter = function(sid, key, val) {
   render();
 };
 
+/* ── Auth helper: try without key first, prompt on 401 ──────── */
+function _apiKey() { return sessionStorage.getItem("cti_key") || ""; }
+function _storeKey(k) { if (k) sessionStorage.setItem("cti_key", k); }
+
+async function _authPost(url, body, headers) {
+  const go = (key) => fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json",
+               ...(key ? { "X-API-Key": key } : {}), ...(headers || {}) },
+    body: JSON.stringify(body),
+  });
+  let r = await go(_apiKey());
+  if (r.status === 401) {
+    const key = prompt("API Key:");
+    if (!key) return r;
+    _storeKey(key);
+    r = await go(key);
+  }
+  return r;
+}
+
 /* ── Force refresh ──────────────────────────────────────────── */
 window.forceRefresh = async function(id) {
-  const key = prompt("API Key:");
-  if (!key) return;
   try {
-    await fetch("/api/refresh/" + id, {
-      method: "POST",
-      headers: { "X-API-Key": key },
-    });
+    await _authPost("/api/refresh/" + id, {});
     await _refresh();
   } catch (e) {
     console.error("refresh failed", e);
@@ -67,15 +83,13 @@ window.runTool = async function(sid, idx, tool) {
   const target  = argEl ? argEl.value.trim() : "";
   const extra   = extraEl ? extraEl.value.trim() : null;
   if (!target) return;
-  const key = prompt("API Key:");
-  if (!key) return;
   const okey = `${sid}:${idx}`;
   STATE.toolOut[okey] = { ok: false, output: "running…" };
   render();
   try {
     const r = await fetch("/api/tool/" + encodeURIComponent(tool), {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": key },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target, extra }),
     });
     STATE.toolOut[okey] = await r.json();
@@ -106,26 +120,46 @@ window.hintTarget = function(v) {
 window.addTarget = async function() {
   const inp = document.getElementById("tgt-new");
   if (!inp || !inp.value.trim()) return;
-  const key = prompt("API Key:");
-  if (!key) return;
-  await fetch("/api/targets", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-API-Key": key },
-    body: JSON.stringify({ add: [inp.value.trim()], remove: [] }),
-  });
+  await _authPost("/api/targets", { add: [inp.value.trim()], remove: [] });
   inp.value = "";
   await _refresh();
 };
 
 window.rmTarget = async function(addr) {
-  const key = prompt("API Key:");
-  if (!key) return;
-  await fetch("/api/targets", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-API-Key": key },
-    body: JSON.stringify({ add: [], remove: [addr] }),
-  });
+  await _authPost("/api/targets", { add: [], remove: [addr] });
   await _refresh();
+};
+
+/* ── Asset import / export ──────────────────────────────────── */
+window.exportTargets = async function() {
+  const r = await fetch("/api/targets/export");
+  const data = await r.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "cti-assets.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+};
+
+window.importTargets = async function() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    let data;
+    try { data = JSON.parse(await file.text()); }
+    catch { alert("Invalid JSON file"); return; }
+    const r = await _authPost("/api/targets/import",
+      { ips: data.ips || [], domains: data.domains || [] });
+    if (r.ok) { await _refresh(); }
+    else { const t = await r.text(); alert("Import failed: " + t); }
+  };
+  input.click();
 };
 
 /* ── Main refresh loop ──────────────────────────────────────── */

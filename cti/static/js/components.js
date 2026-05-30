@@ -188,8 +188,6 @@ export function filterChips(sid, rows, key, activeVal) {
 
 /* ── Asset add form: one input, IP *or* domain, live type hint ── */
 function _assetAddForm() {
-  // Live detection mirrors backend targets.classify(): a valid IPv4/IPv6 → ip,
-  // anything else with a dot → domain.
   return `<div class="asset-add">
     <div class="asset-add-row">
       <input id="tgt-new" type="text" placeholder="IP (es. 8.8.8.8) o dominio (es. example.com)…"
@@ -198,7 +196,11 @@ function _assetAddForm() {
       <span id="tgt-kind" class="asset-kind c-dim"></span>
       <button class="tb-btn" onclick="window.addTarget()">+ Add</button>
     </div>
-    <div class="asset-add-note c-dim">Si registrano sia IP sia domini: il tipo è rilevato automaticamente.</div>
+    <div class="asset-add-row asset-ie-row">
+      <button class="tb-btn asset-ie-btn" onclick="window.exportTargets()" title="Download assets as JSON">⬇ Export JSON</button>
+      <button class="tb-btn asset-ie-btn" onclick="window.importTargets()" title="Upload a JSON asset list">⬆ Import JSON</button>
+      <span class="c-dim" style="font-size:10px">import/export migra la lista su altre postazioni</span>
+    </div>
   </div>`;
 }
 
@@ -300,6 +302,31 @@ export function providerBar(data) {
       ${r.detail ? `<span class="pbar-detail c-dim c-trunc">${esc(String(r.detail).slice(0,80))}</span>` : ""}
     </div>`;
   }).join("")}</div>`;
+}
+
+/* ── BGP second toolbar: per-ISP status indicators ──────────── */
+const _SEV_RANK = { ok: 0, info: 1, source_error: 1, warning: 2, critical: 3 };
+
+export function bgpBar() {
+  const bgpData = (STATE.data["bgp"] || {}).data;
+  if (!bgpData || !bgpData.rows || !bgpData.rows.length) return "";
+  // Deduplicate rows by operator name, keeping worst severity per operator.
+  const map = {};
+  for (const r of bgpData.rows) {
+    const n = r.target;
+    if (!map[n] || (_SEV_RANK[r.severity] || 0) > (_SEV_RANK[map[n].severity] || 0))
+      map[n] = r;
+  }
+  return Object.values(map).map(r => {
+    const st = (_SEV_RANK[r.severity] != null) ? r.severity : "off";
+    const title = `${r.target} — ${r.asn} — ${r.severity}`;
+    const inner = `${led(st, false)}<span class="bgp-name">${esc(r.target)}</span>`;
+    if (r.status_url) {
+      return `<a class="bgp-spia bgp-spia-${esc(st)}" href="${esc(r.status_url)}"
+        target="_blank" rel="noopener" title="${esc(title)}">${inner}</a>`;
+    }
+    return `<span class="bgp-spia bgp-spia-${esc(st)}" title="${esc(title)}">${inner}</span>`;
+  }).join("");
 }
 
 /* ── Header "spie": L0 control-lights ────────────────────────
@@ -442,16 +469,12 @@ export function toolRunner(sid, detail) {
     const meta = avail.get(d.tool) || { available: false, extra: null, hint: "" };
     const key  = `${sid}:${i}`;
     const out  = STATE.toolOut[key];
-    // Inputs stay editable even in readonly: the API key is requested at run
-    // time (window.runTool prompts for it). Only an unavailable binary disables.
     const disabled = !meta.available;
     const extraInput = meta.extra
       ? `<input class="tr-extra" id="tr-extra-${esc(sid)}-${i}" value="${esc(d.extra || "")}"
            placeholder="${esc(meta.extra)}" ${disabled ? "disabled" : ""}>`
       : "";
-    const note = !meta.available ? `${esc(d.tool)} not installed`
-               : STATE.ui.readonly ? "enter your API key when you press run"
-               : esc(meta.hint || "");
+    const note = !meta.available ? `${esc(d.tool)} not installed` : esc(meta.hint || "");
     let outHtml = "";
     if (out) {
       const cls = out.ok ? "tr-ok" : "tr-fail";
