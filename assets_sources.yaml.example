@@ -1,0 +1,24 @@
+# assets_sources.yaml — Asset sync source configuration
+# Copy this file to assets_sources.yaml and edit as needed.
+# Run: python -m cti setup   (interactive wizard)
+# Run: python -m cti sync    (immediate one-shot sync)
+#
+# Format: each entry is either { url: https://... } or { path: /abs/path.txt }
+# Each source file: one IP or domain per line, # for comments.
+# Merge strategy: sources only ADD entries — manual edits in assets.yaml are never removed.
+#
+# Daily auto-sync runs automatically while the server is up.
+
+ips:
+  # Remote feed (one IP per line)
+  # - url: https://example.com/my-ips.txt
+
+  # Local file
+  # - path: /opt/cti/lists/ip-watchlist.txt
+
+domains:
+  # Remote feed
+  # - url: https://example.com/domains.txt
+
+  # Local file
+  # - path: /opt/cti/lists/domain-watchlist.txt

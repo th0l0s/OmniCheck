@@ -27,7 +27,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, registry, scheduler, store, tools
+from . import __version__, asset_sync, config, registry, scheduler, store, tools
 from .auth import require_api_key
 from .core import Ctx, RefreshGate, TTLCache, setup_logging
 
@@ -63,10 +63,22 @@ async def lifespan(app: FastAPI):
             state.last_fetch = saved.get("fetched_at")
             warmed += 1
     tasks = scheduler.start(STATES, CFG, ctx)
+
+    async def _asset_sync_daily():
+        await asyncio.sleep(8)  # let sources warm first
+        while True:
+            try:
+                await asset_sync.refresh(client)
+            except Exception as exc:
+                log.warning("asset_sync loop error: %s", exc)
+            await asyncio.sleep(86400)
+
+    sync_task = asyncio.create_task(_asset_sync_daily(), name="asset_sync_daily")
     log.info("CTI v%s up — %d sources registered, %d warmed from disk", __version__, len(STATES), warmed)
     try:
         yield
     finally:
+        sync_task.cancel()
         for t in tasks:
             t.cancel()
         await client.aclose()
