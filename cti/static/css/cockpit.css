@@ -398,6 +398,7 @@
 /* ══ BGP second toolbar ══════════════════════════════════════ */
 #bgp-bar {
   align-items: center;
+  justify-content: center;          /* centered under the topbar */
   gap: 6px;
   padding: 0 var(--s4);
   height: 30px;
@@ -456,6 +457,60 @@
   font-size: 0.68rem;
   padding: 3px 9px;
 }
+
+/* ══ Footer (IAAS-IT bar + external links) ══════════════════ */
+#footer {
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s4);
+  height: 32px;
+  background: color-mix(in srgb, var(--surface) 60%, var(--bg));
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  gap: var(--s4);
+}
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+.footer-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  flex-shrink: 0;
+}
+#iaas-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-shrink: 0;
+}
+.footer-link {
+  font-size: 0.68rem;
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-family: var(--mono);
+  letter-spacing: .03em;
+  transition: color .12s;
+}
+.footer-link:hover { color: var(--c-accent); text-decoration: none; }
+
+/* ── External link in BGP-IT table ──────────────────────────── */
+.ext-link {
+  font-size: 0.72rem;
+  color: var(--c-accent);
+}
+.ext-link:hover { text-decoration: underline; }
 
 /* ══ Credits ═════════════════════════════════════════════════ */
 .credits {

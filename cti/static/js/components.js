@@ -304,29 +304,103 @@ export function providerBar(data) {
   }).join("")}</div>`;
 }
 
-/* ── BGP second toolbar: per-ISP status indicators ──────────── */
+/* ── BGP / IAAS bars — shared helpers ───────────────────────── */
 const _SEV_RANK = { ok: 0, info: 1, source_error: 1, warning: 2, critical: 3 };
 
-export function bgpBar() {
-  const bgpData = (STATE.data["bgp"] || {}).data;
-  if (!bgpData || !bgpData.rows || !bgpData.rows.length) return "";
-  // Deduplicate rows by operator name, keeping worst severity per operator.
+function _dedup(rows) {
+  // One entry per operator name, keeping worst severity.
   const map = {};
-  for (const r of bgpData.rows) {
+  for (const r of rows) {
     const n = r.target;
     if (!map[n] || (_SEV_RANK[r.severity] || 0) > (_SEV_RANK[map[n].severity] || 0))
       map[n] = r;
   }
-  return Object.values(map).map(r => {
-    const st = (_SEV_RANK[r.severity] != null) ? r.severity : "off";
-    const title = `${r.target} — ${r.asn} — ${r.severity}`;
-    const inner = `${led(st, false)}<span class="bgp-name">${esc(r.target)}</span>`;
-    if (r.status_url) {
-      return `<a class="bgp-spia bgp-spia-${esc(st)}" href="${esc(r.status_url)}"
-        target="_blank" rel="noopener" title="${esc(title)}">${inner}</a>`;
-    }
-    return `<span class="bgp-spia bgp-spia-${esc(st)}" title="${esc(title)}">${inner}</span>`;
-  }).join("");
+  return Object.values(map);
+}
+
+function _barChip(r, navTarget) {
+  const st = (_SEV_RANK[r.severity] != null) ? r.severity : "off";
+  const title = `${r.target} — ${r.severity}`;
+  const inner = `${led(st, false)}<span class="bgp-name">${esc(r.target)}</span>`;
+  if (navTarget) {
+    return `<button class="bgp-spia bgp-spia-${esc(st)}" title="${esc(title)}"
+      onclick="window.navigate(${jsq(navTarget)})">${inner}</button>`;
+  }
+  if (r.status_url) {
+    return `<a class="bgp-spia bgp-spia-${esc(st)}" href="${esc(r.status_url)}"
+      target="_blank" rel="noopener" title="${esc(title)}">${inner}</a>`;
+  }
+  return `<span class="bgp-spia bgp-spia-${esc(st)}" title="${esc(title)}">${inner}</span>`;
+}
+
+/* BGP-IT bar: ISP backbone operators only → click navigates to bgp-it page */
+export function bgpBar() {
+  const rows = ((STATE.data["bgp"] || {}).data || {}).rows || [];
+  const isps = rows.filter(r => r.role === "isp" || !r.role);
+  if (!isps.length) return "";
+  return _dedup(isps).map(r => _barChip(r, "bgp-it")).join("");
+}
+
+/* IAAS-IT footer bar: datacenter + IXP → click goes to their status page */
+export function iaasBar() {
+  const rows = ((STATE.data["bgp"] || {}).data || {}).rows || [];
+  const dc = rows.filter(r => r.role === "datacenter" || r.role === "ixp");
+  if (!dc.length) return "";
+  return _dedup(dc).map(r => _barChip(r, null)).join("");
+}
+
+/* BGP-IT full status page: grouped by operator, columns with tech detail */
+export function bgpItPage() {
+  const bgpData = (STATE.data["bgp"] || {}).data;
+  if (!bgpData) return `<div class="empty-note">No BGP data yet.</div>`;
+  const rows = (bgpData.rows || []).filter(r => r.role === "isp" || !r.role);
+  if (!rows.length) return `<div class="empty-note">No BGP ISP data.</div>`;
+
+  // Group by target name
+  const groups = {};
+  for (const r of rows) {
+    if (!groups[r.target]) groups[r.target] = [];
+    groups[r.target].push(r);
+  }
+
+  const bad = s => ["warning","critical","source_error"].includes(s);
+  const problems = Object.values(groups).filter(g =>
+    g.some(r => bad(r.severity))).length;
+
+  let h = problems
+    ? `<div class="errline">⚠ ${problems} operator${problems > 1 ? "s" : ""} with BGP/RPKI issues</div>`
+    : `<div class="ok-note">✓ All monitored Italian backbone operators clean</div>`;
+
+  h += `<table><thead><tr>
+    <th>Operator</th><th>ASN</th><th>Severity</th><th>Risk</th>
+    <th>Prefixes</th><th>Status Page</th>
+  </tr></thead><tbody>`;
+
+  const sorted = Object.entries(groups).sort(([, a], [, b]) => {
+    const wa = Math.max(...a.map(r => _SEV_RANK[r.severity] || 0));
+    const wb = Math.max(...b.map(r => _SEV_RANK[r.severity] || 0));
+    return wb - wa;
+  });
+
+  for (const [name, asns] of sorted) {
+    const worst = asns.reduce((m, r) =>
+      (_SEV_RANK[r.severity] || 0) > (_SEV_RANK[m.severity] || 0) ? r : m);
+    const cls = worst.severity === "critical" ? "r-crit" : bad(worst.severity) ? "r-high" : "";
+    const statusLink = worst.status_url
+      ? `<a href="${esc(worst.status_url)}" target="_blank" rel="noopener" class="ext-link">
+           status ↗</a>`
+      : `<span class="c-dim">—</span>`;
+    const asnList = asns.map(r => `<span class="c-mono c-dim">${esc(r.asn)}</span>`).join(" ");
+    h += `<tr class="${cls}">
+      <td><strong>${esc(name)}</strong></td>
+      <td>${asnList}</td>
+      <td>${badge(worst.severity || "—")}</td>
+      <td class="c-dim">${esc(worst.risk_score ?? "—")}</td>
+      <td class="c-dim">${esc(asns.reduce((s, r) => s + (r.prefixes || 0), 0))}</td>
+      <td>${statusLink}</td>
+    </tr>`;
+  }
+  return h + `</tbody></table>`;
 }
 
 /* ── Header "spie": L0 control-lights ────────────────────────

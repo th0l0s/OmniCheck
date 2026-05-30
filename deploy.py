@@ -57,10 +57,19 @@ HEALTH_URL  = "http://127.0.0.1:9000/api/health"
 # config.yaml and .env are never overwritten (host-specific).
 # During --install they are pushed only if absent on the remote.
 SYNC_DIRS   = ["cti"]
-SYNC_FILES  = ["cti.service", "requirements.txt", "feeds.yaml", "README.md"]
+SYNC_FILES  = ["cti.service", "requirements.txt", "feeds.yaml", "README.md",
+               "assets_sources.yaml.example"]
 SKIP_PARTS  = {"__pycache__", ".pytest_cache", "logs", ".venv", "venv", ".git", "state"}
 SKIP_SUFFIX = {".pyc", ".pyo"}
-SKIP_NAMES  = {".env", "targets.json", "config.yaml", "assets.yaml"}  # never clobber host-specific files
+# These files are NEVER overwritten on the remote host — they contain
+# instance-specific configuration, secrets, or user-managed data.
+SKIP_NAMES  = {
+    ".env",                     # API keys and secrets
+    "config.yaml",              # host-specific ports, credentials, intervals
+    "assets.yaml",              # user's monitored asset list
+    "assets_sources.yaml",      # user's sync-source config (URLs / paths)
+    "targets.json",             # legacy target list (older installs)
+}
 
 # ── .env template written on first install ────────────────────────────────────
 _ENV_TEMPLATE = """\
@@ -143,6 +152,10 @@ def ensure_dir(sftp, path: str) -> None:
 def put(sftp, content: bytes, rpath: str) -> None:
     ensure_dir(sftp, rpath.rsplit("/", 1)[0])
     sftp.putfo(io.BytesIO(content), rpath)
+
+
+def _show_protected() -> None:
+    print("  protected (never overwritten):", ", ".join(sorted(SKIP_NAMES)))
 
 
 # ── file collection ───────────────────────────────────────────────────────────
@@ -305,16 +318,23 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Deploy CTI Sentinel to the remote host.")
     ap.add_argument("--dry-run", action="store_true", help="show changes, upload nothing")
     ap.add_argument("--pip",     action="store_true", help="sync + pip install + restart")
+    ap.add_argument("--upgrade", action="store_true", help="alias for --pip (sync + deps + restart)")
     ap.add_argument("--force",   action="store_true", help="sync + restart even if nothing changed")
     ap.add_argument("--install", action="store_true", help="full bootstrap (idempotent — safe to re-run)")
     ap.add_argument("--status",  action="store_true", help="show remote /api/health, no changes")
     ap.add_argument("--logs",    nargs="?", const=40, type=int, metavar="N",
                     help="tail N lines of cti journal (default 40)")
+    ap.add_argument("--setup",   action="store_true",
+                    help="run asset-sources setup wizard on the remote host")
     args = ap.parse_args()
 
     print(f"→ {USER}@{HOST}:{PORT}")
     ssh, sftp = connect()
     print("  connected\n")
+
+    # --upgrade is a friendlier alias for --pip
+    if args.upgrade:
+        args.pip = True
 
     try:
         if args.status:
@@ -326,11 +346,18 @@ def main() -> None:
             print(out)
             return
 
+        if args.setup:
+            print("running setup wizard on remote …")
+            _, out, err = run(ssh, f"cd {REMOTE_ROOT} && {VENV}/bin/python -m cti setup")
+            print(out or err)
+            return
+
         if args.install:
             install(ssh, sftp, dry=args.dry_run)
             return
 
         # ── normal sync / upgrade ──────────────────────────────────────────────
+        _show_protected()
         print(f"syncing → {REMOTE_ROOT}/")
         n = sync(sftp, dry=args.dry_run, force=args.force)
 

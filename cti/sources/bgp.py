@@ -222,8 +222,8 @@ def parse(raw: dict) -> dict:
         "summary": summary,
         "critical": critical,
         "rows": [{"target": t["name"], "asn": f"AS{t['asn']}", "group": t.get("group", ""),
-                  "severity": t["severity"], "risk_score": t["risk_score"],
-                  "prefixes": t.get("prefixes_checked", 0),
+                  "role": t.get("role", ""), "severity": t["severity"],
+                  "risk_score": t["risk_score"], "prefixes": t.get("prefixes_checked", 0),
                   "status_url": t.get("status_url", "")} for t in targets],
     }
 

@@ -12,6 +12,7 @@ no new HTML. That is the whole point of Plan B.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import platform

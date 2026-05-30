@@ -6,7 +6,8 @@ import {
   intelWidget, providerBar, feedsWidget,
   sourceStatus, layerOf, kindOf, overviewOf, isConfigured,
   sourcesByLayer, globalStatus, layerLabel,
-  spie, bgpBar, logicBlock, configBlock, eventsBlock, toolRunner,
+  spie, bgpBar, iaasBar, bgpItPage,
+  logicBlock, configBlock, eventsBlock, toolRunner,
   domainsWidget, bgpWidget, ateraWidget,
 } from './components.js';
 
@@ -16,6 +17,7 @@ export function render() {
   _bgpBar();
   _sidebar();
   _content();
+  _footer();
 }
 
 /* ── Topbar ─────────────────────────────────────────────────── */
@@ -47,6 +49,16 @@ function _bgpBar() {
   const content = bgpBar();
   if (inner) inner.innerHTML = content;
   bar.style.display = content ? "flex" : "none";
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+function _footer() {
+  const inner = document.getElementById("iaas-bar-inner");
+  if (!inner) return;
+  const content = iaasBar();
+  inner.innerHTML = content;
+  const footer = document.getElementById("footer");
+  if (footer) footer.style.display = "flex";
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────── */
@@ -88,11 +100,33 @@ function _content() {
   if (!el) return;
   const { route, routeParam } = STATE;
   if      (route === "source" && routeParam) el.innerHTML = _sourcePage(routeParam);
+  else if (route === "bgp-it")               el.innerHTML = _bgpItPage();
   else if (route === "check")                el.innerHTML = _checkPage();
   else if (route === "info" || route === "feeds") el.innerHTML = _feedsPage();
   else if (route === "advanced")             el.innerHTML = _advancedPage();
   else if (route === "status")               el.innerHTML = _statusPage();
   else                                       el.innerHTML = _overviewPage();
+}
+
+/* ── BGP-IT full status page ─────────────────────────────────── */
+function _bgpItPage() {
+  const bgpData = (STATE.data["bgp"] || {}).data;
+  const gen = bgpData && bgpData.generated_at
+    ? `<span class="c-dim" style="font-size:11px;margin-left:8px">updated ${esc(bgpData.generated_at.slice(0,16).replace("T"," "))} UTC</span>`
+    : "";
+  let html = `<div class="pg-hdr">
+    <button class="back-btn" onclick="history.back()">← back</button>
+    <h1 class="pg-title">BGP Watch — Italian Backbone${gen}</h1>
+    <div class="pg-sub c-dim">RPKI · IRR · global visibility — RIPEstat live data</div>
+  </div>`;
+  html += `<div class="sect-title">ISP Status</div>` + bgpItPage();
+  if (bgpData) {
+    html += `<div class="sect-title">Summary</div>`;
+    html += summaryCards(STATE.sources.find(s => s.id === "bgp") || {schema:{summary_keys:["targets_checked","prefixes_checked"]}}, bgpData);
+  }
+  const s = STATE.sources.find(x => x.id === "bgp");
+  if (s) html += `<div class="sect-title">Engine</div><div class="mon-grid">${monitorCard(s)}</div>`;
+  return html;
 }
 
 /* ── Essentials (L0, minus the header spie) ─────────────────── */
